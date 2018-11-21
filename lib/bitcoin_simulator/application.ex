@@ -5,8 +5,6 @@ defmodule BitcoinSimulator.Application do
 
   use Application
 
-  @total_peers 100
-
   def start(_type, _args) do
     # List all child processes to be supervised
     children = [
@@ -17,13 +15,11 @@ defmodule BitcoinSimulator.Application do
       # Starts a worker by calling: BitcoinSimulator.Worker.start_link(arg)
       # {BitcoinSimulator.Worker, arg},
       {Registry, keys: :unique, name: BitcoinSimulator.Registry, partitions: System.schedulers_online()},
-      Supervisor.child_spec({BitcoinSimulator.Monitor, %{total_peers: @total_peers}}, restart: :transient)
+      Supervisor.child_spec({BitcoinSimulator.BitcoinCore.BlockchainServer, []}, restart: :transient),
+      Supervisor.child_spec({BitcoinSimulator.BitcoinCore.Tracker, []}, restart: :transient),
+      {DynamicSupervisor, strategy: :one_for_one, name: BitcoinSimulator.DynamicSupervisor},
+      Supervisor.child_spec({BitcoinSimulator.Monitor, []}, restart: :transient)
     ]
-
-    peers = Enum.reduce(@total_peers..1, [],
-      fn(x, acc) -> [Supervisor.child_spec({BitcoinSimulator.Peer, [%{}, x]}, id: {BitcoinSimulator.Peer, x}, restart: :temporary) | acc] end)
-
-    children = children ++ peers
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

@@ -1,4 +1,6 @@
 defmodule BitcoinSimulator.BitcoinCore.Network do
+
+  # APIs
   
   def addNode do
     

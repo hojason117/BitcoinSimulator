@@ -40,3 +40,10 @@ npm-debug.log
 # secrets files as long as you replace their contents by environment
 # variables.
 /config/*.secret.exs
+
+# vscode
+/.vscode/
+/.elixir_ls/
+
+# mac os
+.DS_Store

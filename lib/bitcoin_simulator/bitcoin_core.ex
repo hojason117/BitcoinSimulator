@@ -1,133 +1,74 @@
 defmodule BitcoinSimulator.BitcoinCore do
-    
+
+  alias BitcoinSimulator.BitcoinCore.Blockchain
+  alias BitcoinSimulator.BitcoinCore.Mining
+  alias BitcoinSimulator.BitcoinCore.Network
+  alias BitcoinSimulator.BitcoinCore.Wallet
+
   # Block Chain
 
-  def getBestBlockHash do
-    
-  end
+  def getBestBlockHash, do: Blockchain.getBestBlockHash()
 
-  def getBlock do
-    
-  end
+  def getBlock(hash), do: Blockchain.getBlock(hash)
 
-  def getBlockChainInfo do
-    
-  end
+  def getBlockChainInfo, do: Blockchain.getBlockChainInfo()
 
-  def getBlockCount do
-    
-  end
+  def getBlockCount, do: Blockchain.getBlockCount()
 
-  def getBlockHash do
-    
-  end
+  def getBlockHash(height), do: Blockchain.getBlockHash(height)
 
-  def getBlockHeader do
-    
-  end
+  def getBlockHeader(hash), do: Blockchain.getBlockHeader(hash)
 
-  def getDifficulty do
-
-  end
-
-  # Control
-
-  def stop do
-    
-  end
+  def getDifficulty, do: Blockchain.getDifficulty()
 
   # Mining
 
-  def getBlockTemplate do
-    
-  end
+  def getBlockTemplate, do: Mining.getBlockTemplate()
 
-  def getMiningInfo do
-    
-  end
+  def getMiningInfo, do: Mining.getMiningInfo()
 
-  def submitBlock do
-    
-  end
+  def submitBlock, do: Mining.submitBlock()
 
   # Network
 
-  def addNode do
-    
-  end
+  def addNode, do: Network.addNode()
 
-  def disconnectNode do
-    
-  end
+  def disconnectNode, do: Network.disconnectNode()
 
-  def getAddedNodeInfo do
-    
-  end
+  def getAddedNodeInfo, do: Network.getAddedNodeInfo()
 
-  def getConnectionCount do
-    
-  end
+  def getConnectionCount, do: Network.getConnectionCount()
 
-  def getNetworkInfo do
-    
-  end
+  def getNetworkInfo, do: Network.getNetworkInfo()
 
-  def getPeerInfo do
-    
-  end
+  def getPeerInfo, do: Network.getPeerInfo()
 
   # Wallet
 
-  def getAccount do
-    
-  end
+  def getAccount, do: Wallet.getAccount()
 
-  def getBalance do
-    
-  end
+  def getBalance, do: Wallet.getBalance()
 
-  def getNewAddress do
-    
-  end
+  def getNewAddress, do: Wallet.getNewAddress()
 
-  def getReceivedByAddress do
+  def getReceivedByAddress, do: Wallet.getReceivedByAddress()
 
-  end
+  def getTransaction, do: Wallet.getTransaction()
 
-  def getTransaction do
-    
-  end
+  def getWalletInfo, do: Wallet.getWalletInfo()
 
-  def getWalletInfo do
-    
-  end
+  def importPrivKey, do: Wallet.importPrivKey()
 
-  def importPrivKey do
-    
-  end
+  def listReceivedByAddress, do: Wallet.listReceivedByAddress()
 
-  def listReceivedByAddress do
+  def listSinceBlock, do: Wallet.listSinceBlock()
 
-  end
+  def listTransactions, do: Wallet.listTransactions()
 
-  def listSinceBlock do
-    
-  end
+  def listUnspent, do: Wallet.listUnspent()
 
-  def listTransactions do
-    
-  end
+  def sendToAddress, do: Wallet.sendToAddress()
 
-  def listUnspent do
+  def signMessage, do: Wallet.signMessage()
 
-  end
-
-  def sendToAddress do
-
-  end
-
-  def signMessage do
-    
-  end
-    
 end

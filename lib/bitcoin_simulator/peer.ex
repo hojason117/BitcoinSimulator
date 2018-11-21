@@ -1,35 +1,31 @@
 defmodule BitcoinSimulator.Peer do
-
-  defmodule Peer do
-    defstruct name: nil, hash: nil
-  end
-
-  @hash_func :sha
-
   use GenServer
+
+  alias BitcoinSimulator.BitcoinCore.Tracker
 
   # Client
 
   def start_link(arg) do
-    name = {:via, Registry, {BitcoinSimulator.Registry, "node_#{Enum.at(arg, 1)}"}}
-    GenServer.start_link(__MODULE__, arg |> Enum.at(0) |> Map.put(:id, Enum.at(arg, 1)), name: name)
+    name = {:via, Registry, {BitcoinSimulator.Registry, "peer_#{arg}"}}
+    GenServer.start_link(__MODULE__, arg, name: name)
   end
 
   # Server (callbacks)
 
   def init(arg) do
-    {:ok, arg}
+    neighbors = GenServer.call(Tracker, {:peer_join, arg})
+
+    state = %{
+      id: arg,
+      name: "peer_#{arg}",
+      neighbors: neighbors,
+      roles: []
+    }
+
+    {:ok, state}
   end
 
-  def handle_cast(:terminate, state) do
-    new_state = Map.put(state, :alive, false)
-    {:stop, :normal, new_state}
-  end
-
-  def terminate(reason, _state) do
-    if reason != :normal, do: IO.inspect(reason)
-    :timer.sleep(1000)
-  end
+  def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
 
   # Aux
 

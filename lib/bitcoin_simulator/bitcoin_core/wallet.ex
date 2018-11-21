@@ -1,4 +1,6 @@
 defmodule BitcoinSimulator.BitcoinCore.Wallet do
+
+  # APIs
   
   def getAccount do
     
