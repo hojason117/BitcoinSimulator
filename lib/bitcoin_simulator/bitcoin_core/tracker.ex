@@ -23,7 +23,7 @@ defmodule BitcoinSimulator.BitcoinCore.Tracker do
   def handle_call(:random_id, _from, state), do: {:reply, get_random_id(state.peer_ids), state}
 
   def handle_call({:peer_join, id}, _from, state) do
-    neighbors = if state.total_peers == 0, do: [], else: get_random_peers(state.peer_ids, state.total_peers)
+    neighbors = if state.total_peers == 0, do: MapSet.new(), else: get_random_peers(state.peer_ids, state.total_peers)
     new_state = Map.merge(state, %{total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)})
     {:reply, neighbors, new_state}
   end
@@ -40,11 +40,10 @@ defmodule BitcoinSimulator.BitcoinCore.Tracker do
   defp get_random_peers(set, total) do
     neighbor_count = Const.decode(:neighbor_count)
     if total < neighbor_count do
-      MapSet.to_list(set)
+      set
     else
       random_peer(set, MapSet.new(), neighbor_count)
     end
-
   end
 
   defp random_peer(set, result, target_count) do

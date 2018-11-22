@@ -5,7 +5,9 @@ defmodule BitcoinSimulator.Const do
     max_total_peer: 100000,
     neighbor_count: 10,
     initial_peer_count: 100,
-    initial_miner_percentage: 10
+    initial_miner_percentage: 10,
+    stop_gossip_threshold: 5,
+    exchange_neighbors_interval: 15000
   ]
 
   for {key, value} <- values do
