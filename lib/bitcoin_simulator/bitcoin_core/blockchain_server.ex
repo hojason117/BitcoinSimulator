@@ -17,6 +17,34 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainServer do
     ]
   end
 
+  defmodule Transaction do
+    defstruct [
+      in_count: 0,
+      tx_in: [],
+      out_count: 0,
+      tx_out: [],
+      time: nil,
+      signatures: [],
+      public_keys: []
+    ]
+  end
+
+  defmodule Txin do
+    defstruct [
+      previous_output: %{
+        hash: nil,
+        index: 0
+      }
+    ]
+  end
+
+  defmodule Txout do
+    defstruct [
+      value: 0,
+      address: nil
+    ]
+  end
+
   # Client
 
   def start_link(_) do

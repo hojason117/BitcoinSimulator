@@ -29,6 +29,8 @@ defmodule BitcoinSimulator.Monitor do
     {:ok, state}
   end
 
+  def handle_call(:network_info, _from, state), do: {:reply, state, state}
+
   def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
 
   # Aux

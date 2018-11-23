@@ -26,8 +26,21 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     double_hash(header)
   end
 
+  def transaction_hash(tx) do
+    in_count = Integer.to_string(tx.in_count)
+    tx_in = txin_hash(tx.tx_in)
+    out_count = Integer.to_string(tx.out_count)
+    tx_out = txout_hash(tx.tx_out)
+    time = Time.to_string(tx.time)
+    signatures = signatures_hash(tx.signatures)
+    public_keys = public_keys_hash(tx.public_keys)
+
+    input = in_count <> tx_in <> out_count <> tx_out <> time <> signatures <> public_keys
+    double_hash(input)
+  end
+
   def merkle_root(transactions) do
-    hashes = Enum.reduce(transactions, [], fn(x, acc) -> [double_hash("") | acc] end)
+    hashes = Enum.reduce(transactions, [], fn(x, acc) -> [double_hash(x) | acc] end)
     hashes |> Enum.reverse() |> merkle_tree_hash_level() |> Enum.at(0)
   end
 
@@ -54,6 +67,26 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     new_hashes = if odd, do: [double_hash(temp <> temp) | new_hashes], else: new_hashes
 
     merkle_tree_hash_level(Enum.reverse(new_hashes))
+  end
+
+  defp txin_hash(txin) do
+    Enum.reduce(txin, "", fn(x, acc) ->
+      acc <> x.previous_output.hash <> Integer.to_string(x.previous_output.index)
+    end)
+  end
+
+  defp txout_hash(txout) do
+    Enum.reduce(txout, "", fn(x, acc) ->
+      acc <> Integer.to_string(x.value) <> x.address
+    end)
+  end
+
+  defp signatures_hash(signatures) do
+    Enum.reduce(signatures, fn(x, acc) -> acc <> x end)
+  end
+
+  defp public_keys_hash(keys) do
+    Enum.reduce(keys, fn(x, acc) -> acc <> x end)
   end
 
 end

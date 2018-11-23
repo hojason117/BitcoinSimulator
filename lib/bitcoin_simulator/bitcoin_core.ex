@@ -31,21 +31,9 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   # Network
 
-  def addNode, do: Network.addNode()
-
-  def disconnectNode, do: Network.disconnectNode()
-
-  def getAddedNodeInfo, do: Network.getAddedNodeInfo()
-
-  def getConnectionCount, do: Network.getConnectionCount()
-
   def getNetworkInfo, do: Network.getNetworkInfo()
 
-  def getPeerInfo, do: Network.getPeerInfo()
-
   # Wallet
-
-  def getAccount, do: Wallet.getAccount()
 
   def getBalance, do: Wallet.getBalance()
 
