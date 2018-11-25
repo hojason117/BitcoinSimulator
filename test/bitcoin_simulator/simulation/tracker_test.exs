@@ -1,7 +1,7 @@
-defmodule BitcoinSimulator.BitcoinCore.TrackerTest do
+defmodule BitcoinSimulator.Simulation.TrackerTest do
   use ExUnit.Case, async: true
 
-  alias BitcoinSimulator.BitcoinCore.Tracker
+  alias BitcoinSimulator.Simulation.Tracker
 
   test "get random id" do
     id_1 = GenServer.call(Tracker, :random_id)

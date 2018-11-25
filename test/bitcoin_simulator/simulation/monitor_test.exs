@@ -1,4 +1,4 @@
-defmodule BitcoinSimulator.MonitorTest do
+defmodule BitcoinSimulator.Simulation.MonitorTest do
   use ExUnit.Case, async: true
 
   alias BitcoinSimulator.Const

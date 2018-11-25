@@ -16,9 +16,10 @@ defmodule BitcoinSimulator.Application do
       # {BitcoinSimulator.Worker, arg},
       {Registry, keys: :unique, name: BitcoinSimulator.Registry, partitions: System.schedulers_online()},
       Supervisor.child_spec({BitcoinSimulator.BitcoinCore.BlockchainServer, []}, restart: :transient),
-      Supervisor.child_spec({BitcoinSimulator.BitcoinCore.Tracker, []}, restart: :transient),
+      Supervisor.child_spec({BitcoinSimulator.Simulation.Tracker, []}, restart: :transient),
       {DynamicSupervisor, strategy: :one_for_one, name: BitcoinSimulator.DynamicSupervisor},
-      Supervisor.child_spec({BitcoinSimulator.Monitor, []}, restart: :transient)
+      Supervisor.child_spec({BitcoinSimulator.Simulation.TradeCenter, []}, restart: :transient),
+      Supervisor.child_spec({BitcoinSimulator.Simulation.Monitor, []}, restart: :transient)
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

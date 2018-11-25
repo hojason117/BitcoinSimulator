@@ -1,4 +1,4 @@
-defmodule BitcoinSimulator.BitcoinCore.Tracker do
+defmodule BitcoinSimulator.Simulation.Tracker do
   use GenServer
 
   alias BitcoinSimulator.Const
@@ -6,7 +6,7 @@ defmodule BitcoinSimulator.BitcoinCore.Tracker do
   # Client
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, nil, name: BitcoinSimulator.BitcoinCore.Tracker)
+    GenServer.start_link(__MODULE__, nil, name: BitcoinSimulator.Simulation.Tracker)
   end
 
   # Server (callbacks)

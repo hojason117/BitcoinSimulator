@@ -23,8 +23,6 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
       address: :crypto.hash(Const.decode(:hash_func), "test_out"),
     }
 
-    signature = :crypto.hash(Const.decode(:hash_func), "test_sig")
-
     public_key = :crypto.hash(Const.decode(:hash_func), "test_key")
 
     {:ok, time} = Time.new(0, 0, 0, 0)
@@ -34,12 +32,11 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
       out_count: 1,
       tx_out: [tx_out],
       time: time,
-      signatures: [signature],
       public_keys: [public_key]
     }
 
-    assert Blockchain.transaction_hash(transaction) == <<96, 21, 111, 148, 103, 136, 12, 139, 20, 182, 118, 63, 191, 83, 192, 59, 126,
-      176, 177, 210, 255, 150, 120, 165, 81, 160, 149, 189, 228, 247, 174, 110>>
+    assert Blockchain.transaction_hash(transaction) == <<233, 90, 145, 137, 101, 238, 65, 202, 18, 176, 73, 95, 98, 252, 140, 155, 156,
+      34, 193, 53, 174, 28, 169, 37, 143, 252, 33, 192, 219, 90, 116, 48>>
   end
 
 end

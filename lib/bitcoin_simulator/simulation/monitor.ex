@@ -1,9 +1,9 @@
-defmodule BitcoinSimulator.Monitor do
+defmodule BitcoinSimulator.Simulation.Monitor do
   use GenServer
 
-  alias BitcoinSimulator.Peer
   alias BitcoinSimulator.Const
-  alias BitcoinSimulator.BitcoinCore.Tracker
+  alias BitcoinSimulator.Simulation.Peer
+  alias BitcoinSimulator.Simulation.Tracker
 
   # Client
 
@@ -36,3 +36,5 @@ defmodule BitcoinSimulator.Monitor do
   # Aux
 
 end
+
+# net worth, transaction frequency, peer count,role count

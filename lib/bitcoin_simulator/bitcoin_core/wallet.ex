@@ -2,7 +2,10 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
 
   defmodule Wallet do
     defstruct [
-      addresses: []
+      spent_addresses: [],
+      unspent_addresses: %{},
+      unspent_address_set: MapSet.new(),
+      unspent_balance: 0.0
     ]
   end
 
@@ -10,7 +13,12 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
     defstruct [
       public_key: nil,
       private_Key: nil,
-      address: nil
+      address: nil,
+      value: 0,
+      outpoint: %{
+        hash: nil,
+        index: 0
+      }
     ]
   end
 
@@ -21,8 +29,7 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
   end
 
   def getNewAddress do
-    private_key = :crypto.strong_rand_bytes(32)
-    {public_key, ^private_key} = :crypto.generate_key(:ecdh, :secp256k1, private_key)
+    {public_key, private_key} = :crypto.generate_key(:ecdh, :secp256k1)
     address = :crypto.hash(:ripemd160, :crypto.hash(:sha256, public_key))
 
     %Address{

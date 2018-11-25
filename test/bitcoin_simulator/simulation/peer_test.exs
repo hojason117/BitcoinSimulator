@@ -1,7 +1,7 @@
-defmodule BitcoinSimulator.PeerTest do
+defmodule BitcoinSimulator.Simulation.PeerTest do
   use ExUnit.Case, async: true
 
-  alias BitcoinSimulator.Peer
+  alias BitcoinSimulator.Simulation.Peer
   alias BitcoinSimulator.Const
 
   test "exchange neighbors" do

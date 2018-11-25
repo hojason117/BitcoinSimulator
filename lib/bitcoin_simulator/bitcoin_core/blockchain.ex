@@ -32,10 +32,9 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     out_count = Integer.to_string(tx.out_count)
     tx_out = txout_hash(tx.tx_out)
     time = Time.to_string(tx.time)
-    signatures = signatures_hash(tx.signatures)
     public_keys = public_keys_hash(tx.public_keys)
 
-    input = in_count <> tx_in <> out_count <> tx_out <> time <> signatures <> public_keys
+    input = in_count <> tx_in <> out_count <> tx_out <> time <> public_keys
     double_hash(input)
   end
 
@@ -79,10 +78,6 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     Enum.reduce(txout, "", fn(x, acc) ->
       acc <> Integer.to_string(x.value) <> x.address
     end)
-  end
-
-  defp signatures_hash(signatures) do
-    Enum.reduce(signatures, fn(x, acc) -> acc <> x end)
   end
 
   defp public_keys_hash(keys) do
