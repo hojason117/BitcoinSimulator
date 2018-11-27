@@ -1,5 +1,6 @@
 defmodule BitcoinSimulator.Simulation.Tracker do
   use GenServer
+  require Logger
 
   alias BitcoinSimulator.Const
 
@@ -25,6 +26,7 @@ defmodule BitcoinSimulator.Simulation.Tracker do
   def handle_call({:peer_join, id}, _from, state) do
     neighbors = if state.total_peers == 0, do: MapSet.new(), else: get_random_peers(state.peer_ids, state.total_peers)
     new_state = Map.merge(state, %{total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)})
+    Logger.info("Peer joined [id: #{id}]")
     {:reply, neighbors, new_state}
   end
 

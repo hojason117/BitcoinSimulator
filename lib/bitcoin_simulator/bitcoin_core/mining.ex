@@ -1,4 +1,5 @@
 defmodule BitcoinSimulator.BitcoinCore.Mining do
+  require Logger
   use Timex
 
   alias BitcoinSimulator.BitcoinCore.Blockchain
@@ -14,8 +15,8 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
 
   def submitBlock(block) do
     if Blockchain.verify_block?(block) do
-      IO.inspect(Blockchain.block_header_hash(block.header))
-      IO.inspect(block)
+      Logger.info("Block mined [transaction count: #{length(block.transactions)},hash: #{inspect(Blockchain.block_header_hash(block.header))}]")
+
     else
 
     end
