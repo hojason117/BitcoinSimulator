@@ -4,16 +4,18 @@ defmodule BitcoinSimulator.Const do
     hash_digest: 256,
     max_total_peer: 100000,
     neighbor_count: 10,
-    initial_peer_count: 100,
-    initial_miner_percentage: 10,
-    stop_gossip_threshold: 5,
+    default_peer_count: 100,
+    default_trader_percentage: 80,
+    default_miner_percentage: 10,
     exchange_neighbors_interval: 15000,
     peer_initiate_auto_trading_after: 10000,
     peer_auto_trading_interval_range_min: 3000,
     peer_auto_trading_interval_range_max: 5000,
     txout_count_range: 3,
     transaction_value_precision: 3,
-    transaction_fee_percentage_range: 20
+    transaction_fee_percentage_range: 20,
+    max_transaction_per_block: 300,
+    target_difficulty: 2
   ]
 
   for {key, value} <- values do

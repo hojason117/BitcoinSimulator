@@ -4,7 +4,6 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
     defstruct [
       spent_addresses: [],
       unspent_addresses: %{},
-      unspent_address_set: MapSet.new(),
       unspent_balance: 0.0
     ]
   end
@@ -14,7 +13,7 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
       public_key: nil,
       private_Key: nil,
       address: nil,
-      value: 0,
+      value: 0.0,
       outpoint: %{
         hash: nil,
         index: 0

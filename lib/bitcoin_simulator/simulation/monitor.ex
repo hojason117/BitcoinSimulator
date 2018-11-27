@@ -14,16 +14,32 @@ defmodule BitcoinSimulator.Simulation.Monitor do
   # Server (callbacks)
 
   def init(_) do
-    peer_count = Const.decode(:initial_peer_count)
+    peer_count = Const.decode(:default_peer_count)
+    trader_count = peer_count * Const.decode(:default_trader_percentage) / 100 |> trunc()
+    miner_count = peer_count * Const.decode(:default_miner_percentage) / 100 |> trunc()
 
-    Enum.each(1..peer_count, fn(_x) ->
-      id = GenServer.call(Tracker, :random_id)
-      {:ok, _} = DynamicSupervisor.start_child(BitcoinSimulator.DynamicSupervisor,
-        Supervisor.child_spec({Peer, id}, id: {Peer, id}, restart: :temporary))
+    ids = Enum.reduce(1..peer_count, [], fn(_x, acc) -> [GenServer.call(Tracker, :random_id) | acc] end)
+    Enum.each(ids, fn(id) ->
+      {:ok, _} = DynamicSupervisor.start_child(BitcoinSimulator.DynamicSupervisor, Supervisor.child_spec({Peer, id}, id: {Peer, id}, restart: :temporary))
+    end)
+
+    traders = get_random_roles(ids, trader_count, MapSet.new())
+    miner = get_random_roles(ids, miner_count, MapSet.new())
+
+    Enum.each(MapSet.to_list(traders), fn(x) ->
+      GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:modify_role, :trader, :add})
+    end)
+
+    Enum.each(MapSet.to_list(miner), fn(x) ->
+      GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:modify_role, :miner, :add})
     end)
 
     state = %{
-      peer_count: peer_count
+      peer_count: peer_count,
+      trader_count: trader_count,
+      miner_count: miner_count,
+      traders: traders,
+      miner: miner
     }
 
     {:ok, state}
@@ -34,6 +50,11 @@ defmodule BitcoinSimulator.Simulation.Monitor do
   def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
 
   # Aux
+
+  defp get_random_roles(ids, target, result) do
+    result = MapSet.put(result, Enum.random(ids))
+    if MapSet.size(result) == target, do: result, else: get_random_roles(ids, target, result)
+  end
 
 end
 

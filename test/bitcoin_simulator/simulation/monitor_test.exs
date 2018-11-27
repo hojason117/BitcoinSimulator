@@ -3,8 +3,8 @@ defmodule BitcoinSimulator.Simulation.MonitorTest do
 
   alias BitcoinSimulator.Const
 
-  test "did start child" do
-    assert Registry.count(BitcoinSimulator.Registry) == Const.decode(:initial_peer_count)
+  test "did start peers" do
+    assert Registry.count(BitcoinSimulator.Registry) == Const.decode(:default_peer_count)
   end
 
 end

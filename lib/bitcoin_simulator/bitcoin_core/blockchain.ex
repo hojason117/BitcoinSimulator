@@ -39,8 +39,12 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
   end
 
   def merkle_root(transactions) do
-    hashes = Enum.reduce(transactions, [], fn(x, acc) -> [double_hash(x) | acc] end)
-    hashes |> Enum.reverse() |> merkle_tree_hash_level() |> Enum.at(0)
+    unless length(transactions) == 0 do
+      hashes = Enum.reduce(transactions, [], fn(x, acc) -> [transaction_hash(x) | acc] end)
+      hashes |> Enum.reverse() |> merkle_tree_hash_level() |> Enum.at(0)
+    else
+      double_hash("")
+    end
   end
 
   def double_hash(input) do
@@ -48,7 +52,15 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     :crypto.hash(hash_func, :crypto.hash(hash_func, input))
   end
 
-  defp merkle_tree_hash_level(hashes) when length(hashes) == 0, do: [double_hash("")]
+  def verify_block?(_block) do
+    # TODO
+    true
+  end
+
+  def verify_transaction?(_tx) do
+    # TODO
+    true
+  end
 
   defp merkle_tree_hash_level(hashes) when length(hashes) == 1, do: hashes
 
@@ -76,7 +88,7 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
 
   defp txout_hash(txout) do
     Enum.reduce(txout, "", fn(x, acc) ->
-      acc <> Integer.to_string(x.value) <> x.address
+      acc <> Float.to_string(x.value) <> x.address
     end)
   end
 

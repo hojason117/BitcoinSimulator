@@ -23,11 +23,7 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   # Mining
 
-  def getBlockTemplate, do: Mining.getBlockTemplate()
-
-  def getMiningInfo, do: Mining.getMiningInfo()
-
-  def submitBlock, do: Mining.submitBlock()
+  def submitBlock(block), do: Mining.submitBlock(block)
 
   # Network
 

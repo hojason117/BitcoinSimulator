@@ -1,6 +1,14 @@
 defmodule BitcoinSimulator.BitcoinCore.Network do
+  use Timex
 
   alias BitcoinSimulator.Const
+
+  defmodule MessageRecord do
+    defstruct [
+      transactions: Map.new(),
+      blocks: Map.new()
+    ]
+  end
 
   # APIs
 
@@ -19,6 +27,28 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
 
   def exchange_neighbors(neighbors) do
     Enum.each(MapSet.to_list(neighbors), fn(x) -> GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:exchange_neighbors, neighbors}) end)
+  end
+
+  def messageSeen?(record, type, hash) do
+    case type do
+      :transaction ->
+        if Map.has_key?(record.transactions, hash), do: true, else: false
+      :block ->
+        if Map.has_key?(record.blocks, hash), do: true, else: false
+    end
+  end
+
+  def sawMessage(record, type, hash) do
+    case type do
+      :transaction ->
+        %{record | transactions: Map.put(record.transactions, hash, Timex.now())}
+      :block ->
+        %{record | blocks: Map.put(record.blocks, hash, Timex.now())}
+    end
+  end
+
+  def cleanMessageRecord() do
+    # TODO
   end
 
   defp random_peer(set, result, target_count) do
