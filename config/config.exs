@@ -7,8 +7,8 @@
 # General application configuration
 use Mix.Config
 
-config :bitcoin_simulator,
-  ecto_repos: [BitcoinSimulator.Repo]
+# config :bitcoin_simulator,
+#   ecto_repos: [BitcoinSimulator.Repo]
 
 # Configures the endpoint
 config :bitcoin_simulator, BitcoinSimulatorWeb.Endpoint,

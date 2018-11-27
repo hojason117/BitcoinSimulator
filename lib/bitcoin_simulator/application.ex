@@ -9,7 +9,7 @@ defmodule BitcoinSimulator.Application do
     # List all child processes to be supervised
     children = [
       # Start the Ecto repository
-      BitcoinSimulator.Repo,
+      # BitcoinSimulator.Repo,
       # Start the endpoint when the application starts
       BitcoinSimulatorWeb.Endpoint,
       # Starts a worker by calling: BitcoinSimulator.Worker.start_link(arg)

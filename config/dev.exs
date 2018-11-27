@@ -67,9 +67,9 @@ config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
 # Configure your database
-config :bitcoin_simulator, BitcoinSimulator.Repo,
-  username: "postgres",
-  password: "postgres",
-  database: "bitcoin_simulator_dev",
-  hostname: "localhost",
-  pool_size: 10
+# config :bitcoin_simulator, BitcoinSimulator.Repo,
+#   username: "postgres",
+#   password: "postgres",
+#   database: "bitcoin_simulator_dev",
+#   hostname: "localhost",
+#   pool_size: 10

@@ -12,28 +12,28 @@ defmodule BitcoinSimulator.DataCase do
   of the test unless the test case is marked as async.
   """
 
-  use ExUnit.CaseTemplate
+  # use ExUnit.CaseTemplate
 
-  using do
-    quote do
-      alias BitcoinSimulator.Repo
+  # using do
+  #   quote do
+  #     alias BitcoinSimulator.Repo
 
-      import Ecto
-      import Ecto.Changeset
-      import Ecto.Query
-      import BitcoinSimulator.DataCase
-    end
-  end
+  #     import Ecto
+  #     import Ecto.Changeset
+  #     import Ecto.Query
+  #     import BitcoinSimulator.DataCase
+  #   end
+  # end
 
-  setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(BitcoinSimulator.Repo)
+  # setup tags do
+  #   :ok = Ecto.Adapters.SQL.Sandbox.checkout(BitcoinSimulator.Repo)
 
-    unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(BitcoinSimulator.Repo, {:shared, self()})
-    end
+  #   unless tags[:async] do
+  #     Ecto.Adapters.SQL.Sandbox.mode(BitcoinSimulator.Repo, {:shared, self()})
+  #   end
 
-    :ok
-  end
+  #   :ok
+  # end
 
   @doc """
   A helper that transforms changeset errors into a map of messages.
@@ -43,11 +43,11 @@ defmodule BitcoinSimulator.DataCase do
       assert %{password: ["password is too short"]} = errors_on(changeset)
 
   """
-  def errors_on(changeset) do
-    Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
-      Enum.reduce(opts, message, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(value))
-      end)
-    end)
+  def errors_on(_changeset) do
+  #   Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+  #     Enum.reduce(opts, message, fn {key, value}, acc ->
+  #       String.replace(acc, "%{#{key}}", to_string(value))
+  #     end)
+  #   end)
   end
 end

@@ -10,9 +10,9 @@ config :bitcoin_simulator, BitcoinSimulatorWeb.Endpoint,
 config :logger, level: :warn
 
 # Configure your database
-config :bitcoin_simulator, BitcoinSimulator.Repo,
-  username: "postgres",
-  password: "postgres",
-  database: "bitcoin_simulator_test",
-  hostname: "localhost",
-  pool: Ecto.Adapters.SQL.Sandbox
+# config :bitcoin_simulator, BitcoinSimulator.Repo,
+#   username: "postgres",
+#   password: "postgres",
+#   database: "bitcoin_simulator_test",
+#   hostname: "localhost",
+#   pool: Ecto.Adapters.SQL.Sandbox
