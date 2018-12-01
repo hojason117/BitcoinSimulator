@@ -15,13 +15,17 @@ defmodule BitcoinSimulator.Simulation.Tracker do
   def init(_) do
     state = %{
       total_peers: 0,
-      peer_ids: MapSet.new()
+      peer_ids: MapSet.new(),
+      distributed_ids: MapSet.new()
     }
 
     {:ok, state}
   end
 
-  def handle_call(:random_id, _from, state), do: {:reply, get_random_id(state.peer_ids), state}
+  def handle_call(:random_id, _from, state) do
+    id = get_random_id(state.distributed_ids)
+    {:reply, id, Map.put(state, :distributed_ids, MapSet.put(state.distributed_ids, id))}
+  end
 
   def handle_call({:peer_join, id}, _from, state) do
     neighbors = if state.total_peers == 0, do: MapSet.new(), else: get_random_peers(state.peer_ids, state.total_peers)
@@ -35,7 +39,7 @@ defmodule BitcoinSimulator.Simulation.Tracker do
   # Aux
 
   defp get_random_id(set) do
-    id = :rand.uniform(Const.decode(:max_total_peer))
+    id = :rand.uniform(Const.decode(:peer_id_range))
     if MapSet.member?(set, id), do: get_random_id(set), else: id
   end
 

@@ -1,14 +1,14 @@
 defmodule BitcoinSimulator.Simulation.Monitor do
   use GenServer
+  # use BitcoinSimulator.Simulation.Peer
 
+  alias BitcoinSimulator.Simulation.{Peer, Tracker}
   alias BitcoinSimulator.Const
-  alias BitcoinSimulator.Simulation.Peer
-  alias BitcoinSimulator.Simulation.Tracker
 
   # Client
 
   def start_link(_) do
-    GenServer.start_link(__MODULE__, nil, name: BitcoinSimulator.Monitor)
+    GenServer.start_link(__MODULE__, nil, name: BitcoinSimulator.Simulation.Monitor)
   end
 
   # Server (callbacks)
@@ -18,19 +18,19 @@ defmodule BitcoinSimulator.Simulation.Monitor do
     trader_count = peer_count * Const.decode(:default_trader_percentage) / 100 |> trunc()
     miner_count = peer_count * Const.decode(:default_miner_percentage) / 100 |> trunc()
 
-    ids = Enum.reduce(1..peer_count, [], fn(_x, acc) -> [GenServer.call(Tracker, :random_id) | acc] end)
+    ids = if peer_count != 0, do: Enum.reduce(1..peer_count, [], fn(_x, acc) -> [GenServer.call(Tracker, :random_id) | acc] end), else: []
     Enum.each(ids, fn(id) ->
       {:ok, _} = DynamicSupervisor.start_child(BitcoinSimulator.DynamicSupervisor, Supervisor.child_spec({Peer, id}, id: {Peer, id}, restart: :temporary))
     end)
 
-    traders = get_random_roles(ids, trader_count, MapSet.new())
-    miner = get_random_roles(ids, miner_count, MapSet.new())
+    traders = if trader_count != 0, do: get_random_roles(ids, trader_count, MapSet.new()), else: MapSet.new()
+    miners = if miner_count != 0, do: get_random_roles(ids, miner_count, MapSet.new()), else: MapSet.new()
 
     Enum.each(MapSet.to_list(traders), fn(x) ->
       GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:modify_role, :trader, :add})
     end)
 
-    Enum.each(MapSet.to_list(miner), fn(x) ->
+    Enum.each(MapSet.to_list(miners), fn(x) ->
       GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:modify_role, :miner, :add})
     end)
 
@@ -39,7 +39,7 @@ defmodule BitcoinSimulator.Simulation.Monitor do
       trader_count: trader_count,
       miner_count: miner_count,
       traders: traders,
-      miner: miner
+      miner: miners
     }
 
     {:ok, state}

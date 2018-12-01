@@ -15,7 +15,7 @@ defmodule BitcoinSimulator.Application do
       # Starts a worker by calling: BitcoinSimulator.Worker.start_link(arg)
       # {BitcoinSimulator.Worker, arg},
       {Registry, keys: :unique, name: BitcoinSimulator.Registry, partitions: System.schedulers_online()},
-      Supervisor.child_spec({BitcoinSimulator.BitcoinCore.BlockchainServer, []}, restart: :transient),
+      Supervisor.child_spec({BitcoinSimulator.Simulation.Param, []}, restart: :transient),
       Supervisor.child_spec({BitcoinSimulator.Simulation.Tracker, []}, restart: :transient),
       {DynamicSupervisor, strategy: :one_for_one, name: BitcoinSimulator.DynamicSupervisor},
       Supervisor.child_spec({BitcoinSimulator.Simulation.TradeCenter, []}, restart: :transient),

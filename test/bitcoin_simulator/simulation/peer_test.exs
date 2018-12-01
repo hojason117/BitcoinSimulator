@@ -19,4 +19,10 @@ defmodule BitcoinSimulator.Simulation.PeerTest do
     refute MapSet.member?(new_state.neighbors, 1)
   end
 
+  test "random transaction value" do
+    balance = 21.96
+    {transaction_value, transaction_fee, remain_value} = Peer.random_transaction_value(balance)
+    assert Float.round(transaction_value + transaction_fee + remain_value, Const.decode(:transaction_value_precision)) == balance
+  end
+
 end

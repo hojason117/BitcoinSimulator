@@ -1,38 +1,36 @@
 defmodule BitcoinSimulator.BitcoinCore.Mining do
-  require Logger
   use Timex
 
   alias BitcoinSimulator.BitcoinCore.Blockchain
+  alias BitcoinSimulator.Simulation.Param
   alias BitcoinSimulator.Const
 
   defmodule MemPool do
     defstruct [
-      unconfirmed_txs: %{}
+      unconfirmed_txs: Map.new()
     ]
   end
 
   # APIs
 
-  def submitBlock(block) do
-    if Blockchain.verify_block?(block) do
-      Logger.info("Block mined [transaction count: #{length(block.transactions)},hash: #{inspect(Blockchain.block_header_hash(block.header))}]")
+  def get_new_mempool, do: %MemPool{}
 
-    else
-
-    end
-  end
-
-  # Aux
-
-  def add_unconfirmed_tx(mempool, tx, tx_hash) do
-    new_unconfirmed_txs = Map.put(mempool.unconfirmed_txs, tx_hash, tx)
-    %{mempool | unconfirmed_txs: new_unconfirmed_txs}
-  end
-
-  def get_top_unconfirmed_transactions(transactions) do
+  def get_top_unconfirmed_transactions(mempool) do
+    transactions = Map.values(mempool.unconfirmed_txs)
     max_transaction_per_block = Const.decode(:max_transaction_per_block)
     sorted_txs = sort_unconfirmed_transactions(transactions)
     Enum.take(sorted_txs, max_transaction_per_block)
+  end
+
+  def get_block_template(prev_hash, txs) do
+    %Blockchain.Block{
+      header: %Blockchain.BlockHeader{
+        previous_block_hash: prev_hash,
+        merkle_root_hash: Blockchain.merkle_root(txs),
+        n_bits: GenServer.call(Param, {:get_param, :target_difficulty_bits}),
+      },
+      transactions: txs
+    }
   end
 
   def mine(block, self_id) do
@@ -41,17 +39,25 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
     GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{self_id}"}}, {:block_mined, mined_block})
   end
 
+  def add_unconfirmed_tx(mempool, tx, tx_hash) do
+    new_unconfirmed_txs = Map.put(mempool.unconfirmed_txs, tx_hash, tx)
+    %{mempool | unconfirmed_txs: new_unconfirmed_txs}
+  end
+
+  # Aux
+
+  def match_leading_zeros?(hash, difficulty) do
+    remain = Const.decode(:hash_digest) - difficulty
+    <<n::size(difficulty), _::size(remain)>> = hash
+    n == 0
+  end
+
   defp sort_unconfirmed_transactions(txs), do: Enum.sort(txs, fn(a, b) -> Timex.compare(a.time, b.time) == -1 end)
 
   defp mine_helper(header, nonce) do
     filled_header = %{header | time: Timex.now(), nonce: nonce}
     hash = Blockchain.block_header_hash(filled_header)
-    if match_leading_zeros?(hash, Const.decode(:target_difficulty)), do: filled_header, else: mine_helper(header, nonce + 1)
-  end
-
-  defp match_leading_zeros?(hash, difficulty) do
-    leading_zeros = difficulty * 8
-    binary_part(hash, 0, difficulty) == <<0::size(leading_zeros)>>
+    if match_leading_zeros?(hash, GenServer.call(Param, {:get_param, :target_difficulty_bits})), do: filled_header, else: mine_helper(header, nonce + 1)
   end
 
 end

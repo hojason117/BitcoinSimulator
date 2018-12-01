@@ -1,6 +1,7 @@
 defmodule BitcoinSimulator.BitcoinCore.Network do
   use Timex
 
+  alias BitcoinSimulator.Simulation.Tracker
   alias BitcoinSimulator.Const
 
   defmodule MessageRecord do
@@ -12,21 +13,22 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
 
   # APIs
 
-  def getNetworkInfo, do: GenServer.call(BitcoinSimulator.Monitor, :network_info)
+  def get_new_message_record, do: %MessageRecord{}
 
-  # Aux
-
-  def mix_neighbors(set) do
-    neighbor_count = Const.decode(:neighbor_count)
-    if MapSet.size(set) < neighbor_count do
-      set
-    else
-      random_peer(set, MapSet.new(), neighbor_count)
-    end
-  end
+  def get_initial_neighbors(id), do: GenServer.call(Tracker, {:peer_join, id})
 
   def exchange_neighbors(neighbors) do
     Enum.each(MapSet.to_list(neighbors), fn(x) -> GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:exchange_neighbors, neighbors}) end)
+  end
+
+  def mix_neighbors(neighbors, self_id) do
+    neighbors = MapSet.delete(neighbors, self_id)
+    neighbor_count = Const.decode(:neighbor_count)
+    if MapSet.size(neighbors) < neighbor_count do
+      neighbors
+    else
+      random_peer(neighbors, MapSet.new(), neighbor_count)
+    end
   end
 
   def messageSeen?(record, type, hash) do
@@ -47,9 +49,24 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
     end
   end
 
-  def cleanMessageRecord() do
+  def cleanMessageRecord(_record) do
     # TODO
   end
+
+  def broadcast_message(type, message, neighbors) do
+    case type do
+      :transaction ->
+        Enum.each(MapSet.to_list(neighbors), fn(x) ->
+          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:transaction, message})
+        end)
+      :block ->
+        Enum.each(MapSet.to_list(neighbors), fn(x) ->
+          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:block, message})
+        end)
+    end
+  end
+
+  # Aux
 
   defp random_peer(set, result, target_count) do
     result = MapSet.put(result, set |> MapSet.to_list() |> Enum.random())

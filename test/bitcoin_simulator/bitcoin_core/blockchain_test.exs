@@ -2,23 +2,75 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
   use ExUnit.Case, async: true
 
   alias BitcoinSimulator.BitcoinCore.Blockchain
-  alias BitcoinSimulator.BitcoinCore.BlockchainServer
   alias BitcoinSimulator.Const
 
-  test "double hash" do
-    hash_func = Const.decode(:hash_func)
-    assert Blockchain.double_hash("test") == :crypto.hash(hash_func, :crypto.hash(hash_func, "test"))
+  test "get new blockchain" do
+    hash_digest = Const.decode(:hash_digest)
+    {:ok, datetime, 0} = DateTime.from_iso8601("2018-11-20T00:00:00Z")
+    genesis_block = %Blockchain.Block{
+      header: %Blockchain.BlockHeader{
+        previous_block_hash: <<0::size(hash_digest)>>,
+        merkle_root_hash: <<93, 246, 224, 226, 118, 19, 89, 211, 10, 130, 117, 5, 142, 41, 159, 204, 3,
+          129, 83, 69, 69, 245, 92, 244, 62, 65, 152, 63, 93, 76, 148, 86>>,
+        time: datetime,
+        n_bits: 0,
+        nonce: 0
+      },
+      transactions: []
+    }
+
+    blockchain = %{
+      blocks: Map.new(),
+      transactions: Map.new(),
+      block_count: 0,
+      genesis_block: nil,
+      tip: nil
+    }
+
+    blockchain = %{blockchain |
+      blocks: Map.put(blockchain.blocks, Blockchain.block_header_hash(genesis_block.header), genesis_block),
+      transactions: Map.new(),
+      block_count: 1,
+      genesis_block: genesis_block,
+      tip: genesis_block
+    }
+
+    target = Blockchain.get_new_blockchain()
+    assert Map.size(target.blocks) == Map.size(blockchain.blocks)
+    assert target.block_count == 1
+    assert target.genesis_block == target.tip
+    assert target.genesis_block == genesis_block
+  end
+
+  test "get best block hash" do
+    # Blockchain.get_best_block_hash()
+  end
+
+  test "block header hash" do
+    hash_digest = Const.decode(:hash_digest)
+    {:ok, datetime, 0} = DateTime.from_iso8601("2018-11-20T00:00:00Z")
+    header = %Blockchain.BlockHeader{
+      previous_block_hash: <<0::size(hash_digest)>>,
+      merkle_root_hash: <<93, 246, 224, 226, 118, 19, 89, 211, 10, 130, 117, 5, 142, 41, 159, 204, 3,
+        129, 83, 69, 69, 245, 92, 244, 62, 65, 152, 63, 93, 76, 148, 86>>,
+      time: datetime,
+      n_bits: 0,
+      nonce: 0
+    }
+
+    assert Blockchain.block_header_hash(header) == <<130, 240, 173, 63, 120, 29, 97, 134, 5, 49, 147, 152, 31, 23, 120, 112, 195,
+      223, 124, 184, 58, 15, 135, 23, 52, 78, 212, 40, 63, 92, 66, 91>>
   end
 
   test "transaction hash" do
-    tx_in = %BlockchainServer.Txin{
+    tx_in = %Blockchain.Txin{
       previous_output: %{
         hash: :crypto.hash(Const.decode(:hash_func), "test_in"),
         index: 0
       }
     }
 
-    tx_out = %BlockchainServer.Txout{
+    tx_out = %Blockchain.Txout{
       value: 10.0,
       address: :crypto.hash(Const.decode(:hash_func), "test_out"),
     }
@@ -26,7 +78,7 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
     public_key = :crypto.hash(Const.decode(:hash_func), "test_key")
 
     {:ok, time} = DateTime.from_unix(1_464_096_368)
-    transaction = %BlockchainServer.Transaction{
+    transaction = %Blockchain.Transaction{
       in_count: 1,
       tx_in: [tx_in],
       out_count: 1,
@@ -40,14 +92,14 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
   end
 
   test "merkle root" do
-    tx_in = %BlockchainServer.Txin{
+    tx_in = %Blockchain.Txin{
       previous_output: %{
         hash: :crypto.hash(Const.decode(:hash_func), "test_in"),
         index: 0
       }
     }
 
-    tx_out = %BlockchainServer.Txout{
+    tx_out = %Blockchain.Txout{
       value: 10.0,
       address: :crypto.hash(Const.decode(:hash_func), "test_out"),
     }
@@ -55,7 +107,7 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
     public_key = :crypto.hash(Const.decode(:hash_func), "test_key")
 
     {:ok, time} = DateTime.from_unix(1_464_096_368)
-    tx = %BlockchainServer.Transaction{
+    tx = %Blockchain.Transaction{
       in_count: 1,
       tx_in: [tx_in],
       out_count: 1,
