@@ -44,6 +44,19 @@ defmodule BitcoinSimulator.BitcoinCore.RawTransaction do
     %{tx | signatures: signatures}
   end
 
+  def create_coinbase_transaction(out_addresses, out_values) do
+    hash_digest = Const.decode(:hash_digest)
+    txin = [%Blockchain.Txin{ previous_output: %{ hash: <<0::size(hash_digest)>>, index: -1 } }]
+    txout = [%Blockchain.Txout{ value: out_values, address: out_addresses }]
+    %Blockchain.Transaction{
+      in_count: 1,
+      tx_in: txin,
+      out_count: 1,
+      tx_out: txout,
+      time: Timex.now(),
+    }
+  end
+
   # Aux
 
 end

@@ -3,7 +3,6 @@ defmodule BitcoinSimulator.Simulation.Peer do
   require Logger
 
   alias BitcoinSimulator.BitcoinCore
-  alias BitcoinSimulator.BitcoinCore.Wallet
   alias BitcoinSimulator.Simulation.{TradeCenter, Param}
   alias BitcoinSimulator.Const
 
@@ -17,47 +16,46 @@ defmodule BitcoinSimulator.Simulation.Peer do
   # Server (callbacks)
 
   def init(arg) do
-    neighbors = BitcoinCore.get_initial_neighbors(arg)
-
-    {public_key, private_key} = :crypto.generate_key(:ecdh, :secp256k1)
-    addr = :crypto.hash(:ripemd160, :crypto.hash(:sha256, public_key))
-    address = %Wallet.Address{
-      public_key: public_key,
-      private_Key: private_key,
-      address: addr,
-      value: 10.0,
-      outpoint: %{
-        hash: :crypto.hash(:sha256, ""),
-        index: 0
-      }
-    }
-
-    state = %{
-      id: arg,
-      name: "peer_#{arg}",
-      neighbors: neighbors,
-      roles: MapSet.new(),
-      wallet: %Wallet.Wallet{
-        unspent_addresses: Map.new([{address.address, address}]),
-        unspent_balance: 10.0
-      },
-      blockchain: BitcoinCore.get_new_blockchain(),
-      mempool: BitcoinCore.get_new_mempool(),
-      messageRecord: BitcoinCore.get_new_message_record()
-    }
+    # {public_key, private_key} = :crypto.generate_key(:ecdh, :secp256k1)
+    # addr = :crypto.hash(:ripemd160, :crypto.hash(:sha256, public_key))
+    # address = %Wallet.Address{
+    #   public_key: public_key,
+    #   private_Key: private_key,
+    #   address: addr,
+    #   value: 10.0,
+    #   outpoint: %{
+    #     hash: :crypto.hash(:sha256, ""),
+    #     index: 0
+    #   }
+    # }
 
     # state = %{
     #   id: arg,
     #   name: "peer_#{arg}",
-    #   neighbors: neighbors,
+    #   neighbors: BitcoinCore.get_initial_neighbors(arg),
     #   roles: MapSet.new(),
-    #   wallet: BitcoinCore.get_new_wallet(),
+    #   wallet: %Wallet.Wallet{
+    #     unspent_addresses: Map.new([{address.address, address}]),
+    #     unspent_balance: 10.0
+    #   },
     #   blockchain: BitcoinCore.get_new_blockchain(),
     #   mempool: BitcoinCore.get_new_mempool(),
-    #   messageRecord: BitcoinCore.get_new_message_record()
+    #   message_record: BitcoinCore.get_new_message_record()
     # }
 
+    state = %{
+      id: arg,
+      name: "peer_#{arg}",
+      neighbors: BitcoinCore.get_initial_neighbors(arg),
+      roles: MapSet.new(),
+      wallet: BitcoinCore.get_new_wallet(),
+      blockchain: BitcoinCore.get_new_blockchain(),
+      mempool: BitcoinCore.get_new_mempool(),
+      message_record: BitcoinCore.get_new_message_record()
+    }
+
     Process.send_after(self(), :exchange_neighbors, Const.decode(:exchange_neighbors_interval))
+    Process.send_after(self(), :clean_message_record, Const.decode(:network_message_record_ttl))
     Process.send_after(self(), :initiate_trade, Const.decode(:peer_initiate_auto_trading_after))
     Process.send_after(self(), :initiate_mine, Const.decode(:peer_initiate_mining_after))
 
@@ -86,15 +84,17 @@ defmodule BitcoinSimulator.Simulation.Peer do
     {:noreply, Map.put(state, :neighbors, BitcoinCore.mix_neighbors(MapSet.union(state.neighbors, peer_neighbors), state.id))}
   end
 
-  def handle_cast({:transaction, transaction}, state) do
+  def handle_cast({:transaction, transaction, sender}, state) do
     tx_hash = BitcoinCore.transaction_hash(transaction)
-    unless BitcoinCore.messageSeen?(state.messageRecord, :transaction, tx_hash) do
-      new_state = Map.put(state, :messageRecord, BitcoinCore.sawMessage(state.messageRecord, :transaction, tx_hash))
+    unless BitcoinCore.message_seen?(state.message_record, :transaction, tx_hash) do
+      new_state = Map.put(state, :message_record, BitcoinCore.saw_message(state.message_record, :transaction, tx_hash))
       new_state =
-        if BitcoinCore.verify_transaction?(transaction) do
-          BitcoinCore.broadcast_message(:transaction, transaction, new_state.neighbors)
+        if BitcoinCore.verify_transaction?(new_state.blockchain, transaction) do
+          filtered_neightbors = MapSet.delete(new_state.neighbors, sender)
+          BitcoinCore.broadcast_message(:transaction, transaction, filtered_neightbors, new_state.id)
           Map.put(new_state, :mempool, BitcoinCore.add_unconfirmed_tx(new_state.mempool, transaction, tx_hash))
         else
+          Logger.info("Transaction rejected")
           new_state
         end
       {:noreply, new_state}
@@ -105,28 +105,30 @@ defmodule BitcoinSimulator.Simulation.Peer do
 
   def handle_cast({:transaction_assembled, transaction, new_wallet}, state) do
     new_state =
-      if BitcoinCore.verify_transaction?(transaction) do
+      if BitcoinCore.verify_transaction?(state.blockchain, transaction) do
         tx_hash = BitcoinCore.transaction_hash(transaction)
-        BitcoinCore.broadcast_message(:transaction, transaction, state.neighbors)
+        BitcoinCore.broadcast_message(:transaction, transaction, state.neighbors, state.id)
 
         Map.merge(state, %{
-          messageRecord: BitcoinCore.sawMessage(state.messageRecord, :transaction, tx_hash),
+          message_record: BitcoinCore.saw_message(state.message_record, :transaction, tx_hash),
           mempool: BitcoinCore.add_unconfirmed_tx(state.mempool, transaction, tx_hash),
           wallet: new_wallet
         })
       else
+        Logger.info("Transaction rejected")
         state
       end
     {:noreply, new_state}
   end
 
   def handle_cast({:block_mined, block}, state) do
-    # if Blockchain.verify_block?(block) do
-      Logger.info("Block mined [transaction count: #{length(block.transactions)},hash: #{inspect(BitcoinCore.block_header_hash(block.header))}]")
+    if BitcoinCore.verify_block?(state.blockchain, block) do
+      Logger.info("Block mined [transaction count: #{length(block.transactions)}]")
 
-    # else
+    else
+      Logger.info("Block rejected")
 
-    # end
+    end
 
 
 
@@ -152,84 +154,28 @@ defmodule BitcoinSimulator.Simulation.Peer do
   def handle_info(:initiate_mine, state) do
     if MapSet.member?(state.roles, :miner) do
       txs = BitcoinCore.get_top_unconfirmed_transactions(state.mempool)
+      coinbase_value = BitcoinCore.calc_cainbase_value(state.blockchain, txs)
+      {new_address, new_wallet} = BitcoinCore.get_new_address(state.wallet)
+      coinbase_tx = BitcoinCore.create_coinbase_transaction(new_address.address, coinbase_value)
+      txs = [coinbase_tx | txs]
       block = BitcoinCore.get_block_template(BitcoinCore.get_best_block_hash(state.blockchain), txs)
       spawn_link(BitcoinCore, :mine, [block, state.id])
+      {:noreply, Map.put(state, :wallet, new_wallet)}
     else
       Process.send_after(self(), :initiate_mine, 5000)
+      {:noreply, state}
     end
-    {:noreply, state}
   end
 
-  def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
+  def handle_info(:clean_message_record, state) do
+    new_record = BitcoinCore.clean_message_record(state.message_record)
+    Process.send_after(self(), :clean_message_record, Const.decode(:network_message_record_ttl))
+    {:noreply, Map.put(state, :message_record, new_record)}
+  end
+
+  def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)
 
   # Aux
-
-  # defp trade(state) do
-  #   trading_partner_count = Enum.random(1..Const.decode(:txout_count_range))
-  #   partners = GenServer.call(TradeCenter, {:get_random_trade_partner, state.id, trading_partner_count})
-  #   {transaction_value, transaction_fee, _remain_value} =
-  #     if state.wallet.unspent_balance < 0.1 do
-  #       {0.0, 0.0, state.wallet.unspent_balance}
-  #     else
-  #       TradeCenter.random_transaction_value(state.wallet.unspent_balance)
-  #     end
-
-  #   unless partners == :not_enough_partner or transaction_value == 0.0 do
-  #     out_addresses = Enum.reduce(MapSet.to_list(partners), [], fn(x, acc) ->
-  #       [GenServer.call({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, :new_address) | acc]
-  #     end)
-
-  #     sorted_addresses = state.wallet.unspent_addresses |> Map.values() |> sort_addresses_by_value()
-  #     {in_addresses, sum} = combine_unspent_addresses(sorted_addresses, transaction_value + transaction_fee, [], 0.0, 0)
-  #     {change, change_value} =
-  #       if sum == transaction_value + transaction_fee do
-  #         {false, 0.0}
-  #       else
-  #         {true, sum - transaction_value - transaction_fee}
-  #       end
-
-  #     txin_count = length(in_addresses)
-  #     txin = Enum.reduce(in_addresses, [], fn(x, acc) ->
-  #       acc ++ [%BlockchainServer.Txin{ previous_output: x.outpoint }]
-  #     end)
-
-  #     out_values = split_out_value(transaction_value, length(out_addresses), [], 0.0)
-  #     txout = Enum.reduce(0..length(out_values) - 1, [], fn(x, acc) ->
-  #       acc ++ [%BlockchainServer.Txout{ value: Enum.at(out_values, x), address: Enum.at(out_addresses, x) }]
-  #     end)
-  #     txout =
-  #       if change do
-  #         change_address = GenServer.call({:via, Registry, {BitcoinSimulator.Registry, "peer_#{state.id}"}}, :new_address)
-  #         txout ++ [%BlockchainServer.Txout{ value: change_value, address: change_address }]
-  #       else
-  #         txout
-  #       end
-  #     txout_count = length(txout)
-
-  #     public_keys = Enum.reduce(in_addresses, [], fn(x, acc) ->
-  #       acc ++ [x.public_key]
-  #     end)
-
-  #     tx = %BlockchainServer.Transaction{
-  #       in_count: txin_count,
-  #       tx_in: txin,
-  #       out_count: txout_count,
-  #       tx_out: txout,
-  #       time: Timex.now(),
-  #       public_keys: public_keys
-  #     }
-
-  #     tx_hash = Blockchain.transaction_hash(tx)
-  #     signatures = Enum.reduce(in_addresses, [], fn(x, acc) ->
-  #       acc ++ [:crypto.sign(:ecdsa, Const.decode(:hash_func), tx_hash, [x.private_Key, :secp256k1])]
-  #     end)
-
-  #     tx = %{tx | signatures: signatures}
-
-  #     GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{state.id}"}}, {:spend_addresses, in_addresses})
-  #     GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{state.id}"}}, {:transaction_assembled, tx})
-  #   end
-  # end
 
   def random_transaction_value(balance) do
     if balance < 0.1 do

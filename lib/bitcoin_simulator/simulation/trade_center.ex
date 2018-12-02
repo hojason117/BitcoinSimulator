@@ -1,5 +1,6 @@
 defmodule BitcoinSimulator.Simulation.TradeCenter do
   use GenServer
+  require Logger
 
   # Client
 
@@ -32,7 +33,7 @@ defmodule BitcoinSimulator.Simulation.TradeCenter do
     {:noreply, new_state}
   end
 
-  def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
+  def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)
 
   # Aux
 

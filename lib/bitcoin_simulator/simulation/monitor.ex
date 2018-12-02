@@ -1,5 +1,6 @@
 defmodule BitcoinSimulator.Simulation.Monitor do
   use GenServer
+  require Logger
   # use BitcoinSimulator.Simulation.Peer
 
   alias BitcoinSimulator.Simulation.{Peer, Tracker}
@@ -47,7 +48,7 @@ defmodule BitcoinSimulator.Simulation.Monitor do
 
   def handle_call(:network_info, _from, state), do: {:reply, state, state}
 
-  def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
+  def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)
 
   # Aux
 

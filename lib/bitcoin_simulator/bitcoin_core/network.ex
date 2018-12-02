@@ -31,7 +31,7 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
     end
   end
 
-  def messageSeen?(record, type, hash) do
+  def message_seen?(record, type, hash) do
     case type do
       :transaction ->
         if Map.has_key?(record.transactions, hash), do: true, else: false
@@ -40,7 +40,7 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
     end
   end
 
-  def sawMessage(record, type, hash) do
+  def saw_message(record, type, hash) do
     case type do
       :transaction ->
         %{record | transactions: Map.put(record.transactions, hash, Timex.now())}
@@ -49,19 +49,33 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
     end
   end
 
-  def cleanMessageRecord(_record) do
-    # TODO
+  def clean_message_record(record) do
+    tx_list = Map.to_list(record.transactions)
+    block_list = Map.to_list(record.blocks)
+    current_time = Timex.now()
+    ttl = Const.decode(:network_message_record_ttl)
+    drop_tx = Enum.reduce(tx_list, [], fn(x, acc) ->
+      if Timex.diff(current_time, elem(x, 1), :milliseconds) > ttl, do: [elem(x, 0) | acc], else: acc
+    end)
+    drop_block = Enum.reduce(block_list, [], fn(x, acc) ->
+      if Timex.diff(current_time, elem(x, 1), :milliseconds) > ttl, do: [elem(x, 0) | acc], else: acc
+    end)
+
+    %{record |
+      transactions: record.transactions |> Map.drop(drop_tx),
+      blocks: record.blocks |> Map.drop(drop_block)
+    }
   end
 
-  def broadcast_message(type, message, neighbors) do
+  def broadcast_message(type, message, neighbors, sender) do
     case type do
       :transaction ->
         Enum.each(MapSet.to_list(neighbors), fn(x) ->
-          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:transaction, message})
+          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:transaction, message, sender})
         end)
       :block ->
         Enum.each(MapSet.to_list(neighbors), fn(x) ->
-          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:block, message})
+          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:block, message, sender})
         end)
     end
   end

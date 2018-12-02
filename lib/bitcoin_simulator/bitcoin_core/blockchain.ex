@@ -7,7 +7,7 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
   defmodule Blockchain do
     defstruct [
       blocks: Map.new(),
-      transactions: Map.new(),
+      unspent_txout: Map.new(),
       block_count: 0,
       genesis_block: nil,
       tip: nil
@@ -54,7 +54,7 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
 
   defmodule Txout do
     defstruct [
-      value: 0,
+      value: 0.0,
       address: nil
     ]
   end
@@ -77,7 +77,6 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
 
     %Blockchain{
       blocks: Map.new([{block_header_hash(genesis_block.header), genesis_block}]),
-      transactions: Map.new(),
       block_count: 1,
       genesis_block: genesis_block,
       tip: genesis_block
@@ -103,16 +102,22 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     double_hash(input)
   end
 
-  def verify_block?(block) do
+  def verify_block?(blockchain, block) do
     cond do
+      # Transaction list must be non-empty
       length(block.transactions) == 0 ->
         false
+      # Block hash must satisfy claimed nBits proof of work
       not Mining.match_leading_zeros?(block_header_hash(block.header), GenServer.call(Param, {:get_param, :target_difficulty_bits})) ->
         false
-      # coinbase
-      not verify_txs?(block.transactions, 0, length(block.transactions)) ->
+      # First transaction must be coinbase
+      not coinbase_transaction?(Enum.at(block.transactions, 0)) ->
         false
-      not merkle_root(block.transactions) == block.header.merkle_root_hash ->
+      # Check all transactions
+      not verify_txs?(blockchain, block.transactions, 0, length(block.transactions)) ->
+        false
+      # Verify Merkle hash
+      merkle_root(block.transactions) != block.header.merkle_root_hash ->
         false
       # prev hash
 
@@ -121,13 +126,23 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     end
   end
 
-  def verify_transaction?(tx) do
+  def verify_transaction?(blockchain, tx) do
     cond do
+      # Neither in or out lists are empty
       length(tx.tx_in) == 0 or length(tx.tx_out) == 0 ->
         false
-      # sum
-      # output
-      # sig
+      # Skip verification for coinbase transactions
+      coinbase_transaction?(tx) ->
+        true
+      # Each input's referenced output must exist and has not already been spent(double spending)
+      not verify_tx_input?(blockchain, tx.tx_in, 0) ->
+        false
+      # Sum of input values >= sum of output values
+      not verify_tx_sum?(blockchain, tx) ->
+        false
+      # Check signature and public key
+      not verify_tx_sig?(blockchain, tx, 0) ->
+        false
 
       true ->
         true
@@ -181,14 +196,60 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
   end
 
   defp public_keys_hash(keys) do
-    Enum.reduce(keys, fn(x, acc) -> acc <> x end)
+    Enum.reduce(keys, "", fn(x, acc) -> acc <> x end)
   end
 
-  defp verify_txs?(txs, index, len) do
+  defp verify_txs?(blockchain, txs, index, len) do
     if index == len do
       true
     else
-      if verify_transaction?(Enum.at(txs, index)), do: verify_txs?(txs, index + 1, len), else: false
+      if verify_transaction?(blockchain, Enum.at(txs, index)), do: verify_txs?(blockchain, txs, index + 1, len), else: false
+    end
+  end
+
+  defp coinbase_transaction?(tx) do
+    hash_digest = Const.decode(:hash_digest)
+    length(tx.tx_in) == 1
+    and Enum.at(tx.tx_in, 0).previous_output.hash == <<0::size(hash_digest)>>
+    and Enum.at(tx.tx_in, 0).previous_output.index == -1
+  end
+
+  defp verify_tx_input?(blockchain, txin, index) do
+    if index == length(txin) do
+      true
+    else
+      if Map.has_key?(blockchain.unspent_txout, Enum.at(txin, index).previous_output) do
+        verify_tx_input?(blockchain, txin, index + 1)
+      else
+        false
+      end
+    end
+  end
+
+  defp verify_tx_sum?(blockchain, tx) do
+    total_in = Enum.reduce(tx.tx_in, 0.0, fn(x, acc) -> acc + blockchain.unspent_txout[x.previous_output].value end) |> Float.round(Const.decode(:transaction_value_precision))
+    total_out = Enum.reduce(tx.tx_out, 0.0, fn(x, acc) -> acc + x.value end) |> Float.round(Const.decode(:transaction_value_precision))
+    total_in >= total_out
+  end
+
+  defp verify_tx_sig?(blockchain, tx, index) do
+    if index == length(tx.signatures) do
+      true
+    else
+      prev_addr = blockchain.unspent_txout[Enum.at(tx.tx_in, index).previous_output].address
+      pk_match? = prev_addr == :crypto.hash(:ripemd160, :crypto.hash(:sha256, Enum.at(tx.public_keys, index)))
+      sig_valid? = :crypto.verify(
+        :ecdsa,
+        Const.decode(:hash_func),
+        transaction_hash(tx),
+        Enum.at(tx.signatures, index),
+        [Enum.at(tx.public_keys, index), :secp256k1])
+
+      if pk_match? and sig_valid? do
+        verify_tx_sig?(blockchain, tx, index + 1)
+      else
+        false
+      end
     end
   end
 

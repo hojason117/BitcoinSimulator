@@ -17,7 +17,9 @@ defmodule BitcoinSimulator.Const do
     transaction_value_precision: 3,
     transaction_fee_percentage_range: 20,
     max_transaction_per_block: 300,
-    target_difficulty_bits: 20
+    target_difficulty_bits: 20,
+    block_reward: 25,
+    network_message_record_ttl: 10000
   ]
 
   for {key, value} <- values do

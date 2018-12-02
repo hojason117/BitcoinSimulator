@@ -34,7 +34,7 @@ defmodule BitcoinSimulator.Simulation.Tracker do
     {:reply, neighbors, new_state}
   end
 
-  def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
+  def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)
 
   # Aux
 

@@ -44,6 +44,11 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
     %{mempool | unconfirmed_txs: new_unconfirmed_txs}
   end
 
+  def calc_cainbase_value(blockchain, txs) do
+    fee = Enum.reduce(txs, 0.0, fn(x, acc) -> acc + calc_transaction_fee(blockchain, x) end)
+    (fee + Const.decode(:block_reward)) |> Float.round(Const.decode(:transaction_value_precision))
+  end
+
   # Aux
 
   def match_leading_zeros?(hash, difficulty) do
@@ -58,6 +63,12 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
     filled_header = %{header | time: Timex.now(), nonce: nonce}
     hash = Blockchain.block_header_hash(filled_header)
     if match_leading_zeros?(hash, GenServer.call(Param, {:get_param, :target_difficulty_bits})), do: filled_header, else: mine_helper(header, nonce + 1)
+  end
+
+  defp calc_transaction_fee(blockchain, tx) do
+    total_in = Enum.reduce(tx.tx_in, 0.0, fn(x, acc) -> acc + blockchain.unspent_txout[x.previous_output].value end) |> Float.round(Const.decode(:transaction_value_precision))
+    total_out = Enum.reduce(tx.tx_out, 0.0, fn(x, acc) -> acc + x.value end) |> Float.round(Const.decode(:transaction_value_precision))
+    (total_in - total_out) |> Float.round(Const.decode(:transaction_value_precision))
   end
 
 end

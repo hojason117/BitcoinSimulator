@@ -12,9 +12,9 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   def transaction_hash(tx), do: Blockchain.transaction_hash(tx)
 
-  def verify_block?(block), do: Blockchain.verify_block?(block)
+  def verify_block?(blockchain, block), do: Blockchain.verify_block?(blockchain, block)
 
-  def verify_transaction?(tx), do: Blockchain.verify_transaction?(tx)
+  def verify_transaction?(blockchain, tx), do: Blockchain.verify_transaction?(blockchain, tx)
 
   def merkle_root(transactions), do: Blockchain.merkle_root(transactions)
 
@@ -30,6 +30,8 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   def add_unconfirmed_tx(mempool, tx, tx_hash), do: Mining.add_unconfirmed_tx(mempool, tx, tx_hash)
 
+  def calc_cainbase_value(blockchain, txs), do: Mining.calc_cainbase_value(blockchain, txs)
+
   # Network
 
   def get_new_message_record, do: %Network.MessageRecord{}
@@ -40,19 +42,21 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   def mix_neighbors(neighbors, self_id), do: Network.mix_neighbors(neighbors, self_id)
 
-  def messageSeen?(record, type, hash), do: Network.messageSeen?(record, type, hash)
+  def message_seen?(record, type, hash), do: Network.message_seen?(record, type, hash)
 
-  def sawMessage(record, type, hash), do: Network.sawMessage(record, type, hash)
+  def saw_message(record, type, hash), do: Network.saw_message(record, type, hash)
 
-  def cleanMessageRecord(record), do: Network.cleanMessageRecord(record)
+  def clean_message_record(record), do: Network.clean_message_record(record)
 
-  def broadcast_message(type, message, neighbors), do: Network.broadcast_message(type, message, neighbors)
+  def broadcast_message(type, message, neighbors, sender), do: Network.broadcast_message(type, message, neighbors, sender)
 
   # Raw Transaction
 
   def create_raw_transaction(in_addresses, out_addresses, out_values, change_address, change_value) do
     RawTransaction.create_raw_transaction(in_addresses, out_addresses, out_values, change_address, change_value)
   end
+
+  def create_coinbase_transaction(out_addresses, out_values), do: RawTransaction.create_coinbase_transaction(out_addresses, out_values)
 
   # Wallet
 

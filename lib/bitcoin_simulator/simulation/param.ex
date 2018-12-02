@@ -1,5 +1,6 @@
 defmodule BitcoinSimulator.Simulation.Param do
   use GenServer
+  require Logger
 
   alias BitcoinSimulator.Const
 
@@ -58,7 +59,7 @@ defmodule BitcoinSimulator.Simulation.Param do
     end
   end
 
-  def terminate(reason, _state), do: if reason != :normal, do: IO.inspect(reason)
+  def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)
 
   # Aux
 

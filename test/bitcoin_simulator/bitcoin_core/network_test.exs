@@ -10,18 +10,18 @@ defmodule BitcoinSimulator.BitcoinCore.NetworkTest do
         blocks: Map.new([{:crypto.hash(:sha256, "exist"), Timex.now()}])
       }
 
-    assert Network.messageSeen?(record, :transaction, :crypto.hash(:sha256, "exist")) == true
-    assert Network.messageSeen?(record, :block, :crypto.hash(:sha256, "not exist")) == false
+    assert Network.message_seen?(record, :transaction, :crypto.hash(:sha256, "exist")) == true
+    assert Network.message_seen?(record, :block, :crypto.hash(:sha256, "not exist")) == false
   end
 
   test "saw message" do
     record = %Network.MessageRecord{}
-    assert Network.messageSeen?(record, :transaction, :crypto.hash(:sha256, "exist")) == false
-    assert Network.messageSeen?(record, :block, :crypto.hash(:sha256, "exist")) == false
-    record = Network.sawMessage(record, :transaction, :crypto.hash(:sha256, "exist"))
-    record = Network.sawMessage(record, :block, :crypto.hash(:sha256, "exist"))
-    assert Network.messageSeen?(record, :transaction, :crypto.hash(:sha256, "exist")) == true
-    assert Network.messageSeen?(record, :block, :crypto.hash(:sha256, "exist")) == true
+    assert Network.message_seen?(record, :transaction, :crypto.hash(:sha256, "exist")) == false
+    assert Network.message_seen?(record, :block, :crypto.hash(:sha256, "exist")) == false
+    record = Network.saw_message(record, :transaction, :crypto.hash(:sha256, "exist"))
+    record = Network.saw_message(record, :block, :crypto.hash(:sha256, "exist"))
+    assert Network.message_seen?(record, :transaction, :crypto.hash(:sha256, "exist")) == true
+    assert Network.message_seen?(record, :block, :crypto.hash(:sha256, "exist")) == true
   end
 
 end
