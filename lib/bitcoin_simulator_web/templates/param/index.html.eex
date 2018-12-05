@@ -1,0 +1,96 @@
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Parameter Name</th>
+      <th scope="col">Description</th>
+      <th scope="col">Value</th>
+      <th scope="col">Modify</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">peer_count</th>
+      <td>Number of peers in the simulation</td>
+      <td><%= @peer_count %></td>
+      <td>
+        <%= form_for @conn, BitcoinSimulatorWeb.Router.Helpers.param_path(@conn, :update, :peer_count), [method: :patch], fn f -> %>
+          <%= number_input f, :peerCount, [class: "form-control", value: "", required: true] %>
+          <small class="form-text text-muted">
+            Peer count should be between 0 ~ 1000.
+          </small>
+          <%= submit "Apply", [class: "btn btn-primary"] %>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">trader_percentage</th>
+      <td>Percentage of peers creating transactions</td>
+      <td><%= @trader_percentage %>%</td>
+      <td>
+        <%= form_for @conn, BitcoinSimulatorWeb.Router.Helpers.param_path(@conn, :update, :trader_percentage), [method: :patch], fn f -> %>
+          <%= number_input f, :traderPercentage, [class: "form-control", value: "", required: true] %>
+          <small class="form-text text-muted">
+            Percentage should be between 0 ~ 100.
+          </small>
+          <%= submit "Apply", [class: "btn btn-primary"] %>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">miner_percentage</th>
+      <td>Percentage of peers mining blocks</td>
+      <td><%= @miner_percentage %>%</td>
+      <td>
+        <%= form_for @conn, BitcoinSimulatorWeb.Router.Helpers.param_path(@conn, :update, :miner_percentage), [method: :patch], fn f -> %>
+          <%= number_input f, :minerPercentage, [class: "form-control", value: "", required: true] %>
+          <small class="form-text text-muted">
+            Percentage should be between 0 ~ 100.
+          </small>
+          <%= submit "Apply", [class: "btn btn-primary"] %>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">peer_auto_trading_interval_range_min</th>
+      <td>Minimum duration before a trader creates a new transction</td>
+      <td><%= @peer_auto_trading_interval_range_min %> ms</td>
+      <td>
+        <%= form_for @conn, BitcoinSimulatorWeb.Router.Helpers.param_path(@conn, :update, :peer_auto_trading_interval_range_min), [method: :patch], fn f -> %>
+          <%= number_input f, :tradeIntervalMin, [class: "form-control", value: "", required: true] %>
+          <small class="form-text text-muted">
+            Must be less than peer_auto_trading_interval_range_max.
+          </small>
+          <%= submit "Apply", [class: "btn btn-primary"] %>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">peer_auto_trading_interval_range_max</th>
+      <td>Maximum duration before a trader creates a new transction</td>
+      <td><%= @peer_auto_trading_interval_range_max %> ms</td>
+      <td>
+        <%= form_for @conn, BitcoinSimulatorWeb.Router.Helpers.param_path(@conn, :update, :peer_auto_trading_interval_range_max), [method: :patch], fn f -> %>
+          <%= number_input f, :tradeIntervalMax, [class: "form-control", value: "", required: true] %>
+          <small class="form-text text-muted">
+            Must be greater than peer_auto_trading_interval_range_min.
+          </small>
+          <%= submit "Apply", [class: "btn btn-primary"] %>
+        <% end %>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">target_difficulty_bits</th>
+      <td>Difficulty of mining (munber of leading zeros)</td>
+      <td><%= @target_difficulty_bits %></td>
+      <td>
+        <%= form_for @conn, BitcoinSimulatorWeb.Router.Helpers.param_path(@conn, :update, :target_difficulty_bits), [method: :patch], fn f -> %>
+          <%= number_input f, :difficultyBits, [class: "form-control", value: "", required: true] %>
+          <small class="form-text text-muted">
+            Number of leading zeros should be between 0 ~ 256.
+          </small>
+          <%= submit "Apply", [class: "btn btn-primary"] %>
+        <% end %>
+      </td>
+    </tr>
+  </tbody>
+</table>

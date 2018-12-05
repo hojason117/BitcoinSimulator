@@ -1,0 +1,22 @@
+<div class="wrapper">
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <h3 class="sidebar-header-text">Bitcoin Simulator</h3>
+    </div>
+
+    <ul class="list-unstyled components">
+      <li>
+        <a href="/">Dashboard</a>
+      </li>
+      <li>
+        <a href="/params">Simulator Parameters</a>
+      </li>
+      <li>
+        <a href="/blocks">Blocks</a>
+      </li>
+      <li>
+        <a href="/transactions">Transactions</a>
+      </li>
+    </ul>
+  </nav>
+</div>

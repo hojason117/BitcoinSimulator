@@ -16,7 +16,10 @@ defmodule BitcoinSimulatorWeb.Router do
   scope "/", BitcoinSimulatorWeb do
     pipe_through :browser
 
-    get "/", PageController, :index
+    get "/", DashboardController, :index
+    resources "/params", ParamController, only: [:index, :update]
+    resources "/blocks", BlockController, only: [:index, :show]
+    resources "/transactions", TransactionController, only: [:index, :show]
   end
 
   # Other scopes may use custom stacks.

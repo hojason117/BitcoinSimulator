@@ -1,4 +1,4 @@
-defmodule BitcoinSimulatorWeb.PageController do
+defmodule BitcoinSimulatorWeb.TransactionController do
   use BitcoinSimulatorWeb, :controller
 
   def index(conn, _params) do

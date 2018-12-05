@@ -5,7 +5,7 @@ Implemented a cryptocurrency following a simplified version of Bitcoin protocol.
 Features including:
 
 * Blockchain
-  * Distributed transaction ledger
+  * Temporary forks (blocks mined at the same time) (**_Not yet implemented_**)
 * Block
   * Previous block hash
   * Merkle tree root
@@ -25,7 +25,7 @@ Features including:
     * Public key
     * Private key
 * Concensus
-  * Block verification (**_Not yet implemented_**)
+  * Block verification
   * Transaction verification
 * Peer-to-Peer Network
   * Peers join and leave arbitrarily
