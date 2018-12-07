@@ -1,6 +1,7 @@
 defmodule BitcoinSimulator.BitcoinCore.Network do
   use Timex
 
+  alias BitcoinSimulator.BitcoinCore.Blockchain
   alias BitcoinSimulator.Simulation.Tracker
   alias BitcoinSimulator.Const
 
@@ -16,6 +17,15 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
   def get_new_message_record, do: %MessageRecord{}
 
   def get_initial_neighbors(id), do: GenServer.call(Tracker, {:peer_join, id})
+
+  def get_initial_blockchain(neighbors) do
+    if MapSet.size(neighbors) != 0 do
+      random_peer = neighbors |> MapSet.to_list() |> Enum.random()
+      GenServer.call({:via, Registry, {BitcoinSimulator.Registry, "peer_#{random_peer}"}}, :request_blockchain)
+    else
+      Blockchain.get_new_blockchain()
+    end
+  end
 
   def exchange_neighbors(neighbors) do
     Enum.each(MapSet.to_list(neighbors), fn(x) -> GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:exchange_neighbors, neighbors}) end)

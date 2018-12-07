@@ -12,7 +12,7 @@ defmodule BitcoinSimulator.Simulation.TrackerTest do
   test "peer join" do
     id = GenServer.call(Tracker, :random_id)
     neighbors = GenServer.call(Tracker, {:peer_join, id})
-    refute MapSet.size(neighbors) == 0
+    assert MapSet.size(neighbors) == 1
   end
 
 end

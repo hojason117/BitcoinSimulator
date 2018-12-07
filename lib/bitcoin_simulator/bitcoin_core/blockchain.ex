@@ -1,6 +1,6 @@
 defmodule BitcoinSimulator.BitcoinCore.Blockchain do
 
-  alias BitcoinSimulator.BitcoinCore.{Blockchain, Mining}
+  alias BitcoinSimulator.BitcoinCore.{Mining, Wallet}
   alias BitcoinSimulator.Simulation.Param
   alias BitcoinSimulator.Const
 
@@ -8,6 +8,7 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     defstruct [
       blocks: Map.new(),
       unspent_txout: Map.new(),
+      confirmation_queue: :queue.new(),
       block_count: 0,
       genesis_block: nil,
       tip: nil
@@ -102,52 +103,108 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     double_hash(input)
   end
 
-  def verify_block?(blockchain, block) do
+  def verify_block(blockchain, block) do
     cond do
       # Transaction list must be non-empty
       length(block.transactions) == 0 ->
-        false
-      # Block hash must satisfy claimed nBits proof of work
+        "Empty transaction list"
+      # Block hash must satisfy nBits proof of work
       not Mining.match_leading_zeros?(block_header_hash(block.header), GenServer.call(Param, {:get_param, :target_difficulty_bits})) ->
-        false
+        "Block hash does not meet target difficulty"
       # First transaction must be coinbase
       not coinbase_transaction?(Enum.at(block.transactions, 0)) ->
-        false
-      # Check all transactions
-      not verify_txs?(blockchain, block.transactions, 0, length(block.transactions)) ->
-        false
+        "First transaction not coinbase"
       # Verify Merkle hash
       merkle_root(block.transactions) != block.header.merkle_root_hash ->
-        false
-      # prev hash
+        "Merkle root hash incorrect"
+      # Check all transactions
+      # TODO
+      not verify_txs?(blockchain, block.transactions, 0, length(block.transactions)) ->
+        "Contained invalid transactions"
+      # Coinbase value = sum of block creation fee and transaction fees
+      block.transactions |> Enum.at(0) |> Map.fetch!(:tx_out) |> Enum.at(0) |> Map.fetch!(:value)
+        != Mining.calc_cainbase_value(blockchain, Enum.drop(block.transactions, 1)) ->
+        "Coinbase value incorrect"
 
       true ->
-        true
+        :ok
     end
   end
 
-  def verify_transaction?(blockchain, tx) do
+  def verify_transaction(blockchain, tx) do
     cond do
       # Neither in or out lists are empty
       length(tx.tx_in) == 0 or length(tx.tx_out) == 0 ->
-        false
+        "tx_in or tx_out is empty"
       # Skip verification for coinbase transactions
       coinbase_transaction?(tx) ->
-        true
+        :ok
       # Each input's referenced output must exist and has not already been spent(double spending)
       not verify_tx_input?(blockchain, tx.tx_in, 0) ->
-        false
+        "Some inputs' referenced output does not exist or is already spent"
       # Sum of input values >= sum of output values
       not verify_tx_sum?(blockchain, tx) ->
-        false
+        "Sum of input values less than sum of output values"
       # Check signature and public key
       not verify_tx_sig?(blockchain, tx, 0) ->
-        false
+        "Signature verification failed"
 
       true ->
-        true
+        :ok
     end
   end
+
+  def add_block(block, blockchain, wallet, mempool, mining_process \\ nil, mining_txs \\ nil) do
+    {new_confirmed_block, new_confirmation_queue} =
+      if :queue.len(blockchain.confirmation_queue) == Const.decode(:confirmation_count) do
+        {{:value, confirmed_block}, new_queue} = :queue.out(blockchain.confirmation_queue)
+        {confirmed_block, new_queue}
+      else
+        {nil, blockchain.confirmation_queue}
+      end
+
+    new_unspent_txout = update_unspent_txout(block.transactions, blockchain.unspent_txout)
+    new_blockchain = %{blockchain |
+      blocks: Map.put(blockchain.blocks, block_header_hash(block.header), block),
+      unspent_txout: new_unspent_txout,
+      confirmation_queue: :queue.in(block, new_confirmation_queue),
+      block_count: blockchain.block_count + 1,
+      tip: block
+    }
+
+    new_wallet =
+      if new_confirmed_block != nil do
+        my_addresses = wallet.unspent_addresses |> Map.keys() |> MapSet.new()
+        addr_details = Enum.reduce(new_confirmed_block.transactions, Map.new(), fn(tx, result) ->
+          tx_hash = transaction_hash(tx)
+          {tx_addrs, _} = Enum.reduce(tx.tx_out, {Map.new(), 0}, fn(x, acc) ->
+            {temp_result, index} = acc
+            if MapSet.member?(my_addresses, x.address) do
+              {temp_result |> Map.put(x.address, {x.value, %{ hash: tx_hash, index: index }}), index + 1}
+            else
+              {temp_result, index + 1}
+            end
+          end)
+          Map.merge(result, tx_addrs)
+        end)
+        Wallet.update_address_detail(addr_details, wallet)
+      else
+        wallet
+      end
+
+    tx_hashes = Enum.reduce(block.transactions |> Enum.drop(1), MapSet.new(), fn(x, acc) -> MapSet.put(acc, transaction_hash(x)) end)
+    new_mempool = Mining.clean_unconfirmed_txs(tx_hashes, mempool)
+
+    if mining_process != nil and mining_txs != nil and MapSet.intersection(mining_txs, tx_hashes) |> MapSet.size() > 0 do
+      IO.puts "XXX"
+      Process.exit(mining_process, :kill)
+      Process.send_after(self(), :initiate_mine, 1000)
+    end
+
+    {new_blockchain, new_wallet, new_mempool}
+  end
+
+  # Aux
 
   def merkle_root(transactions) do
     unless length(transactions) == 0 do
@@ -158,7 +215,21 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     end
   end
 
-  # Aux
+  def update_unspent_txout(txs, unspent_txout) do
+    Enum.reduce(txs, unspent_txout, fn(tx, result) ->
+      new_unspent_txout = Enum.reduce(tx.tx_in, result, fn(x, acc) ->
+        acc |> Map.delete(x.previous_output)
+      end)
+
+      tx_hash = transaction_hash(tx)
+      {new_unspent_txout, _} = Enum.reduce(tx.tx_out, {new_unspent_txout, 0}, fn(x, acc) ->
+        {temp_result, index} = acc
+        {temp_result |> Map.put(%{ hash: tx_hash, index: index }, x), index + 1}
+      end)
+
+      new_unspent_txout
+    end)
+  end
 
   defp double_hash(input) do
     hash_func = Const.decode(:hash_func)
@@ -203,7 +274,7 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     if index == len do
       true
     else
-      if verify_transaction?(blockchain, Enum.at(txs, index)), do: verify_txs?(blockchain, txs, index + 1, len), else: false
+      if verify_transaction(blockchain, Enum.at(txs, index)) == :ok, do: verify_txs?(blockchain, txs, index + 1, len), else: false
     end
   end
 

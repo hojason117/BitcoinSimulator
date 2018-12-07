@@ -1,5 +1,6 @@
 defmodule BitcoinSimulatorWeb.ParamController do
   use BitcoinSimulatorWeb, :controller
+  use Drab.Controller, commanders: [BitcoinSimulatorWeb.NavbarCommander]
 
   alias BitcoinSimulator.Simulation.Param
   alias BitcoinSimulatorWeb.Router.Helpers

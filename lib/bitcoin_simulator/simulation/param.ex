@@ -2,6 +2,7 @@ defmodule BitcoinSimulator.Simulation.Param do
   use GenServer
   require Logger
 
+  alias BitcoinSimulator.Simulation.Monitor
   alias BitcoinSimulator.Const
 
   # Client
@@ -45,17 +46,20 @@ defmodule BitcoinSimulator.Simulation.Param do
   def handle_cast({:set_param, param_type, value}, state) do
     case param_type do
       :peer_count ->
-        {:noreply, Map.put(state, :peer_count, value)}
+        GenServer.cast(Monitor, {:peer_count_change, value})
+        {:noreply, %{state | peer_count: value}}
       :trader_percentage ->
-        {:noreply, Map.put(state, :trader_percentage, value)}
+        GenServer.cast(Monitor, {:trader_percentage_change, value})
+        {:noreply, %{state | trader_percentage: value}}
       :miner_percentage ->
-        {:noreply, Map.put(state, :miner_percentage, value)}
+        GenServer.cast(Monitor, {:miner_percentage_change, value})
+        {:noreply, %{state | miner_percentage: value}}
       :peer_auto_trading_interval_range_min ->
-        {:noreply, Map.put(state, :peer_auto_trading_interval_range_min, value)}
+        {:noreply, %{state | peer_auto_trading_interval_range_min: value}}
       :peer_auto_trading_interval_range_max ->
-        {:noreply, Map.put(state, :peer_auto_trading_interval_range_max, value)}
+        {:noreply, %{state | peer_auto_trading_interval_range_max: value}}
       :target_difficulty_bits ->
-        {:noreply, Map.put(state, :target_difficulty_bits, value)}
+        {:noreply, %{state | target_difficulty_bits: value}}
     end
   end
 

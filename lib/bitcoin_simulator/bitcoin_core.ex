@@ -12,11 +12,13 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   def transaction_hash(tx), do: Blockchain.transaction_hash(tx)
 
-  def verify_block?(blockchain, block), do: Blockchain.verify_block?(blockchain, block)
+  def verify_block(blockchain, block), do: Blockchain.verify_block(blockchain, block)
 
-  def verify_transaction?(blockchain, tx), do: Blockchain.verify_transaction?(blockchain, tx)
+  def verify_transaction(blockchain, tx), do: Blockchain.verify_transaction(blockchain, tx)
 
-  def merkle_root(transactions), do: Blockchain.merkle_root(transactions)
+  def add_block(block, blockchain, wallet, mempool, mining_process \\ nil, mining_txs \\ nil) do
+    Blockchain.add_block(block, blockchain, wallet, mempool, mining_process, mining_txs)
+  end
 
   # Mining
 
@@ -26,7 +28,7 @@ defmodule BitcoinSimulator.BitcoinCore do
 
   def get_block_template(prev_hash, txs), do: Mining.get_block_template(prev_hash, txs)
 
-  def mine(block, self_id), do: Mining.mine(block, self_id)
+  def mine(block, coinbase_addr, self_id), do: Mining.mine(block, coinbase_addr, self_id)
 
   def add_unconfirmed_tx(mempool, tx, tx_hash), do: Mining.add_unconfirmed_tx(mempool, tx, tx_hash)
 
@@ -37,6 +39,8 @@ defmodule BitcoinSimulator.BitcoinCore do
   def get_new_message_record, do: %Network.MessageRecord{}
 
   def get_initial_neighbors(id), do: Network.get_initial_neighbors(id)
+
+  def get_initial_blockchain(neighbors), do: Network.get_initial_blockchain(neighbors)
 
   def exchange_neighbors(neighbors), do: Network.exchange_neighbors(neighbors)
 
@@ -67,5 +71,7 @@ defmodule BitcoinSimulator.BitcoinCore do
   def combine_unspent_addresses(wallet, target_value), do: Wallet.combine_unspent_addresses(wallet, target_value)
 
   def spend_address(wallet, address), do: Wallet.spend_address(wallet, address)
+
+  def import_address(wallet, address), do: Wallet.import_address(wallet, address)
 
 end

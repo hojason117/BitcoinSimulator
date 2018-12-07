@@ -24,14 +24,24 @@ defmodule BitcoinSimulator.Simulation.Tracker do
 
   def handle_call(:random_id, _from, state) do
     id = get_random_id(state.distributed_ids)
-    {:reply, id, Map.put(state, :distributed_ids, MapSet.put(state.distributed_ids, id))}
+    {:reply, id, %{state | distributed_ids: MapSet.put(state.distributed_ids, id)}}
   end
 
   def handle_call({:peer_join, id}, _from, state) do
     neighbors = if state.total_peers == 0, do: MapSet.new(), else: get_random_peers(state.peer_ids, state.total_peers)
-    new_state = Map.merge(state, %{total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)})
+    new_state = %{state | total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)}
     Logger.info("Peer joined [id: #{id}]")
     {:reply, neighbors, new_state}
+  end
+
+  def handle_cast({:peer_leave, id}, state) do
+    new_state = %{
+      total_peers: state.total_peers - 1,
+      peer_ids: MapSet.delete(state.peer_ids, id),
+      distributed_ids: MapSet.delete(state.distributed_ids, id)
+    }
+    Logger.info("Peer left [id: #{id}]")
+    {:noreply, new_state}
   end
 
   def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)

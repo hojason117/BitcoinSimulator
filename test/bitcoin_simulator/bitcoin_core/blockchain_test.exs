@@ -125,4 +125,29 @@ defmodule BitcoinSimulator.BitcoinCore.BlockchainTest do
       129, 83, 69, 69, 245, 92, 244, 62, 65, 152, 63, 93, 76, 148, 86>>
   end
 
+  test "update unspent txout" do
+    unspent_txout = %{
+      %{ hash: <<100::256>>, index: 2 } => %{ value: 3.679, address: <<200::256>> }
+    }
+
+    assert unspent_txout |> Map.to_list |> Enum.at(0) == {%{ hash: <<100::256>>, index: 2 }, %{ value: 3.679, address: <<200::256>> }}
+
+    {:ok, time} = DateTime.from_unix(1_464_096_368)
+    txs = [
+      %Blockchain.Transaction{
+        in_count: 1,
+        tx_in: [%{ previous_output: %{ hash: <<100::256>>, index: 2 } }],
+        out_count: 1,
+        tx_out: [%{ value: 3.679, address: <<300::256>> }],
+        time: time,
+        signatures: [<<400::256>>],
+        public_keys: [<<500::256>>]
+      }
+    ]
+
+    unspent_txout = Blockchain.update_unspent_txout(txs, unspent_txout)
+    tx_hash = <<132, 69, 140, 191, 129, 44, 195, 97, 137, 247, 222, 121, 187, 149, 83, 109, 79, 127, 95, 211, 163, 216, 226, 250, 246, 252, 4, 141, 120, 122, 54, 20>>
+    assert unspent_txout |> Map.to_list |> Enum.at(0) == {%{ hash: tx_hash, index: 0 }, %{ value: 3.679, address: <<300::256>> }}
+  end
+
 end

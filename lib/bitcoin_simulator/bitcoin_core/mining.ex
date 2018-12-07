@@ -33,10 +33,11 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
     }
   end
 
-  def mine(block, self_id) do
+  def mine(block, coinbase_addr, self_id) do
+    Process.flag(:priority, :low)
     mined_block_header = mine_helper(block.header, 0)
     mined_block = %{block | header: mined_block_header}
-    GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{self_id}"}}, {:block_mined, mined_block})
+    GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{self_id}"}}, {:block_mined, mined_block, coinbase_addr})
   end
 
   def add_unconfirmed_tx(mempool, tx, tx_hash) do
@@ -55,6 +56,11 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
     remain = Const.decode(:hash_digest) - difficulty
     <<n::size(difficulty), _::size(remain)>> = hash
     n == 0
+  end
+
+  def clean_unconfirmed_txs(tx_hashes, mempool) do
+    new_unconfirmed_txs = Enum.reduce(MapSet.to_list(tx_hashes), mempool.unconfirmed_txs, fn(x, acc) -> Map.delete(acc, x) end)
+    %{mempool | unconfirmed_txs: new_unconfirmed_txs}
   end
 
   defp sort_unconfirmed_transactions(txs), do: Enum.sort(txs, fn(a, b) -> Timex.compare(a.time, b.time) == -1 end)

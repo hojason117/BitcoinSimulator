@@ -17,6 +17,7 @@ defmodule BitcoinSimulatorWeb.Router do
     pipe_through :browser
 
     get "/", DashboardController, :index
+    get "/interactive_peer", InteractivePeerController, :index
     resources "/params", ParamController, only: [:index, :update]
     resources "/blocks", BlockController, only: [:index, :show]
     resources "/transactions", TransactionController, only: [:index, :show]

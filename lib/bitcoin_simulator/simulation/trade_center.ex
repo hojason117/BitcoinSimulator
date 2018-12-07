@@ -29,7 +29,7 @@ defmodule BitcoinSimulator.Simulation.TradeCenter do
   end
 
   def handle_cast({:peer_join, id}, state) do
-    new_state = Map.merge(state, %{total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)})
+    new_state = %{state | total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)}
     {:noreply, new_state}
   end
 

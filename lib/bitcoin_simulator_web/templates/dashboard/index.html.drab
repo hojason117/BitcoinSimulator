@@ -1,0 +1,152 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.js"></script>
+<script>
+  function renderTxChart() {
+    var ctx = document.getElementById("txChart").getContext('2d');
+    return new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+        datasets: [{
+          label: 'Rate',
+          data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          backgroundColor: 'rgba(250, 175, 50, 0.2)',
+          borderColor: 'rgba(250, 175, 50, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        title: {
+          display: true,
+          fontSize: 25,
+          text: "Transaction"
+        },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display: false
+            }
+          }],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: "Transactions Per Minute"
+            },
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        }
+      }
+    });
+  }
+
+  function renderMiningChart() {
+    var ctx = document.getElementById("miningChart").getContext('2d');
+    return new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+        datasets: [{
+            label: 'Rate',
+            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            backgroundColor: 'rgba(80, 220, 100, 0.2)',
+            borderColor: 'rgba(80, 220, 100, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        title: {
+          display: true,
+          fontSize: 25,
+          text: "Mining"
+        },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display: false
+            }
+          }],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: "Blocks Per Minute"
+            },
+            ticks: {
+              beginAtZero: true
+            }
+          }]
+        }
+      }
+    });
+  }
+</script>
+
+<div class="row">
+  <div class="col-sm-12 col-md-12 col-lg-6">
+    <div class="graph-container">
+      <canvas id="txChart"></canvas>
+    </div>
+  </div>
+  <div class="col-sm-12 col-md-12 col-lg-6">
+    <div class="graph-container">
+      <canvas id="miningChart"></canvas>
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-sm-12 col-md-12 col-lg-6">
+    <div class="stat-container">
+      <h3 class="stat-title">Simulator Stats</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Total Peers</th>
+            <td><%= @peer_count %></td>
+          </tr>
+          <tr>
+            <th scope="row">Total Traders</th>
+            <td><%= @trader_count %></td>
+          </tr>
+          <tr>
+            <th scope="row">Total Miners</th>
+            <td><%= @miner_count %></td>
+          </tr>
+          <tr>
+            <th scope="row">Trading Interval</th>
+            <td><%= @trading_interval %> ms</td>
+          </tr>
+          <tr>
+            <th scope="row">Blockchain Height</th>
+            <td><%= @blockchain_height %> blocks</td>
+          </tr>
+          <tr>
+            <th scope="row">Mining Difficulty</th>
+            <td><%= @difficulty %> bits</td>
+          </tr>
+          <tr>
+            <th scope="row">Net Worth</th>
+            <td><%= @net_worth %> Bitcoins</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-sm-12 col-md-12 col-lg-6">
+    <div class="stat-container">
+      <h3 class="stat-title">Real-time</h3>
+        
+    </div>
+  </div>
+</div>
+
+<script>
+  tx_chart = renderTxChart();
+  mine_chart = renderMiningChart();
+</script>

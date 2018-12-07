@@ -55,7 +55,31 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
     }
   end
 
+  def import_address(wallet, address) do
+    %{wallet |
+      unspent_addresses: Map.put(wallet.unspent_addresses, address.address, address),
+      unspent_balance: wallet.unspent_balance + address.value
+    }
+  end
+
   # Aux
+
+  def update_address_detail(details, wallet) do
+    Enum.reduce(details |> Map.to_list(), wallet, fn(x, acc) ->
+      addr = x |> elem(0)
+      addr_value = x |> elem(1) |> elem(0)
+
+      updated = %{acc.unspent_addresses[addr] |
+        value: addr_value,
+        outpoint: x |> elem(1) |> elem(1)
+      }
+
+      %{acc |
+        unspent_addresses: Map.put(acc.unspent_addresses, addr, updated),
+        unspent_balance: acc.unspent_balance + addr_value
+      }
+    end)
+  end
 
   defp sort_addresses_by_value(addresses), do: Enum.sort(addresses, fn(a, b) -> a.value < b.value end)
 

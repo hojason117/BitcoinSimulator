@@ -52,7 +52,7 @@ config :bitcoin_simulator, BitcoinSimulatorWeb.Endpoint,
       ~r{priv/static/.*(js|css|png|jpeg|jpg|gif|svg)$},
       ~r{priv/gettext/.*(po)$},
       ~r{lib/bitcoin_simulator_web/views/.*(ex)$},
-      ~r{lib/bitcoin_simulator_web/templates/.*(eex)$}
+      ~r{lib/bitcoin_simulator_web/templates/.*(eex|drab)$}
     ]
   ]
 

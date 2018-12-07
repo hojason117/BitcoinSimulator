@@ -12,6 +12,9 @@
         <a href="/params">Simulator Parameters</a>
       </li>
       <li>
+        <a href="/interactive_peer">Interactive Peer</a>
+      </li>
+      <li>
         <a href="/blocks">Blocks</a>
       </li>
       <li>

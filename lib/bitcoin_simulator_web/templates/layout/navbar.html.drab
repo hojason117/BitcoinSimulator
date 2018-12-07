@@ -1,0 +1,20 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <div class="nav-button">
+      <button type="button" id="sidebarCollapse" class="btn btn-info">
+        <i class="fas fa-align-left"></i>
+        <span>Toggle Sidebar</span>
+      </button>
+    </div>
+    <div class="navbar-title">
+      <h2><%= navbar_title(@request_path) %></h2>
+    </div>
+    <div class="nav-button">
+      <%= if @simulation_started? do %>
+        <button type="button" class="btn btn-danger btn-lg" drab-click="BitcoinSimulatorWeb.NavbarCommander.toggle_simulation">Terminate Simulation</button>
+      <% else %>
+        <button type="button" class="btn btn-success btn-lg" drab-click="BitcoinSimulatorWeb.NavbarCommander.toggle_simulation">Start Simulation</button>
+      <% end %>
+    </div>
+  </div>
+</nav>
