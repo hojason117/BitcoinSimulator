@@ -118,7 +118,6 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
       merkle_root(block.transactions) != block.header.merkle_root_hash ->
         "Merkle root hash incorrect"
       # Check all transactions
-      # TODO
       not verify_txs?(blockchain, block.transactions, 0, length(block.transactions)) ->
         "Contained invalid transactions"
       # Coinbase value = sum of block creation fee and transaction fees
@@ -195,13 +194,11 @@ defmodule BitcoinSimulator.BitcoinCore.Blockchain do
     tx_hashes = Enum.reduce(block.transactions |> Enum.drop(1), MapSet.new(), fn(x, acc) -> MapSet.put(acc, transaction_hash(x)) end)
     new_mempool = Mining.clean_unconfirmed_txs(tx_hashes, mempool)
 
-    if mining_process != nil and mining_txs != nil and MapSet.intersection(mining_txs, tx_hashes) |> MapSet.size() > 0 do
-      IO.puts "XXX"
-      Process.exit(mining_process, :kill)
-      Process.send_after(self(), :initiate_mine, 1000)
+    if mining_process != nil and MapSet.intersection(mining_txs, tx_hashes) |> MapSet.size() > 0 do
+      {new_blockchain, new_wallet, new_mempool, true}
+    else
+      {new_blockchain, new_wallet, new_mempool, false}
     end
-
-    {new_blockchain, new_wallet, new_mempool}
   end
 
   # Aux

@@ -1,5 +1,7 @@
 defmodule BitcoinSimulator.BitcoinCore.Wallet do
 
+  alias BitcoinSimulator.Const
+
   defmodule Wallet do
     defstruct [
       spent_addresses: [],
@@ -43,7 +45,7 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
 
   def combine_unspent_addresses(wallet, target_value) do
     sorted_addresses = wallet.unspent_addresses |> Map.values() |> sort_addresses_by_value()
-    combine_address_helper(sorted_addresses, target_value, [], 0.0, 0)
+    combine_address_helper(sorted_addresses, target_value |> Float.round(Const.decode(:transaction_value_precision)), [], 0.0, 0)
   end
 
   def spend_address(wallet, address) do
@@ -84,7 +86,7 @@ defmodule BitcoinSimulator.BitcoinCore.Wallet do
   defp sort_addresses_by_value(addresses), do: Enum.sort(addresses, fn(a, b) -> a.value < b.value end)
 
   defp combine_address_helper(addresses, target_value, result, result_sum, current_index) do
-    if result_sum >= target_value do
+    if Float.round(result_sum, Const.decode(:transaction_value_precision)) >= target_value do
       {result, result_sum}
     else
       current = Enum.at(addresses, current_index)

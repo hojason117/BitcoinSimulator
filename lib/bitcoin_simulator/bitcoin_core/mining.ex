@@ -35,7 +35,7 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
 
   def mine(block, coinbase_addr, self_id) do
     Process.flag(:priority, :low)
-    mined_block_header = mine_helper(block.header, 0)
+    mined_block_header = mine_helper(block.header, GenServer.call(Param, {:get_param, :target_difficulty_bits}), 0)
     mined_block = %{block | header: mined_block_header}
     GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{self_id}"}}, {:block_mined, mined_block, coinbase_addr})
   end
@@ -65,10 +65,10 @@ defmodule BitcoinSimulator.BitcoinCore.Mining do
 
   defp sort_unconfirmed_transactions(txs), do: Enum.sort(txs, fn(a, b) -> Timex.compare(a.time, b.time) == -1 end)
 
-  defp mine_helper(header, nonce) do
+  defp mine_helper(header, difficulty, nonce) do
     filled_header = %{header | time: Timex.now(), nonce: nonce}
     hash = Blockchain.block_header_hash(filled_header)
-    if match_leading_zeros?(hash, GenServer.call(Param, {:get_param, :target_difficulty_bits})), do: filled_header, else: mine_helper(header, nonce + 1)
+    if match_leading_zeros?(hash, difficulty), do: filled_header, else: mine_helper(header, difficulty, nonce + 1)
   end
 
   defp calc_transaction_fee(blockchain, tx) do

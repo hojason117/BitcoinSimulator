@@ -139,9 +139,13 @@
     </div>
   </div>
   <div class="col-sm-12 col-md-12 col-lg-6">
-    <div class="stat-container">
-      <h3 class="stat-title">Real-time</h3>
-        
+    <div class="block-container">
+      <h3 class="stat-title">Real-time Blocks</h3>
+      <div class="list-group">
+        <%= for block <- @recent_blocks do %>
+          <%= link(block, to: "#", class: "list-group-item list-group-item-action") %>
+        <% end %>
+      </div>
     </div>
   </div>
 </div>

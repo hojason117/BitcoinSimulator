@@ -4,9 +4,15 @@ defmodule BitcoinSimulatorWeb.DashboardCommander do
   alias BitcoinSimulator.Simulation.Monitor
 
   onload :start_live_update
+  ondisconnect :unsubscribe
 
   def start_live_update(socket) do
+    GenServer.cast(Monitor, {:subscribe, socket})
     spawn_link(fn -> stat_update(socket) end)
+  end
+
+  def unsubscribe(_store, _session) do
+    GenServer.cast(Monitor, :unsubscribe)
   end
 
   defp stat_update(socket) do

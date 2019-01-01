@@ -13,6 +13,7 @@ defmodule BitcoinSimulatorWeb.DashboardController do
     |> assign(:blockchain_height, GenServer.call(Monitor, {:stat, :blockchain_height}))
     |> assign(:difficulty, GenServer.call(Monitor, {:stat, :difficulty}))
     |> assign(:net_worth, GenServer.call(Monitor, {:stat, :net_worth}))
+    |> assign(:recent_blocks, GenServer.call(Monitor, {:stat, :recent_blocks}))
     |> render("index.html")
   end
 end

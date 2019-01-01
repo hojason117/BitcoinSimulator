@@ -59,6 +59,7 @@ defmodule BitcoinSimulator.Simulation.Param do
       :peer_auto_trading_interval_range_max ->
         {:noreply, %{state | peer_auto_trading_interval_range_max: value}}
       :target_difficulty_bits ->
+        GenServer.cast(Monitor, {:notify_difficulty_change, value})
         {:noreply, %{state | target_difficulty_bits: value}}
     end
   end

@@ -24,22 +24,22 @@ defmodule BitcoinSimulator.Simulation.TradeCenter do
     if MapSet.size(peer_ids_exclude_requester) < count do
       {:reply, :not_enough_partner, state}
     else
-      {:reply, get_partner(peer_ids_exclude_requester, MapSet.new(), count), state}
+      {:reply, Enum.take_random(peer_ids_exclude_requester, count) |> MapSet.new(), state}
     end
   end
 
-  def handle_cast({:peer_join, id}, state) do
+  def handle_call({:join_trading, id}, _from, state) do
     new_state = %{state | total_peers: state.total_peers + 1, peer_ids: MapSet.put(state.peer_ids, id)}
-    {:noreply, new_state}
+    {:reply, :ok, new_state}
+  end
+
+  def handle_call({:leave_trading, id}, _from, state) do
+    new_state = %{state | total_peers: state.total_peers - 1, peer_ids: MapSet.delete(state.peer_ids, id)}
+    {:reply, :ok, new_state}
   end
 
   def terminate(reason, _state), do: if reason != :normal, do: Logger.error(reason)
 
   # Aux
-
-  defp get_partner(set, result, target_count) do
-    result = MapSet.put(result, set |> MapSet.to_list() |> Enum.random())
-    if MapSet.size(result) < target_count, do: get_partner(set, result, target_count), else: result
-  end
 
 end

@@ -3,7 +3,7 @@ defmodule BitcoinSimulator.BitcoinCore.WalletTest do
 
   alias BitcoinSimulator.BitcoinCore.Wallet
 
-  test "message seen?" do
+  test "update address detail" do
     wallet = %Wallet.Wallet{}
     assert wallet.unspent_balance == 0.0
 

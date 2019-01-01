@@ -6,4 +6,9 @@ defmodule BitcoinSimulatorWeb.InteractivePeerController do
     conn
     |> render("index.html")
   end
+
+  def show(conn, _params) do
+    conn
+    |> render("show.html")
+  end
 end

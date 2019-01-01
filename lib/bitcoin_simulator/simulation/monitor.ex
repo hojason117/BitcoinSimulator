@@ -21,7 +21,9 @@ defmodule BitcoinSimulator.Simulation.Monitor do
       miners: MapSet.new(),
       simulation_started?: false,
       new_blocks: [],
-      new_txs: []
+      new_txs: [],
+      subscriber: nil,
+      recent_blocks: Enum.reduce(1..8, [], fn(_x, acc) -> ["" | acc] end)
     })
 
     {:ok, state}
@@ -54,9 +56,15 @@ defmodule BitcoinSimulator.Simulation.Monitor do
           {length(state.new_txs), %{state | new_txs: []}}
         :mine_frequency ->
           {length(state.new_blocks), %{state | new_blocks: []}}
+        :recent_blocks ->
+          {state.recent_blocks, state}
       end
     {:reply, result, new_state}
   end
+
+  def handle_cast({:subscribe, socket}, state), do: {:noreply, %{state | subscriber: socket}}
+
+  def handle_cast(:unsubscribe, state), do: {:noreply, %{state | subscriber: nil}}
 
   def handle_cast(:start_simulation, state) do
     {peers, traders, miners} = spawn_peers(state.peers, state.traders, state.miners, GenServer.call(Param, {:get_param, :peer_count}))
@@ -70,52 +78,72 @@ defmodule BitcoinSimulator.Simulation.Monitor do
       miners: miners,
       simulation_started?: true,
       new_blocks: [],
-      new_txs: []
+      new_txs: [],
+      recent_blocks: Enum.reduce(1..8, [], fn(_x, acc) -> ["" | acc] end)
     }
 
     {:noreply, new_state}
   end
 
   def handle_cast(:terminate_simulation, state) do
-    Enum.each(state.peers, fn(x) -> GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, :terminate) end)
+    {peers, traders, miners} = terminate_peers(state.peers, state.traders, state.miners, length(state.peers |> MapSet.to_list()))
 
     new_state = %{state |
-      peer_count: 0,
-      trader_count: 0,
-      miner_count: 0,
-      peers: MapSet.new(),
-      traders: MapSet.new(),
-      miners: MapSet.new(),
+      peer_count: MapSet.size(peers),
+      trader_count: MapSet.size(traders),
+      miner_count: MapSet.size(miners),
+      peers: peers,
+      traders: traders,
+      miners: miners,
       simulation_started?: false,
       new_blocks: [],
-      new_txs: []
+      new_txs: [],
+      recent_blocks: Enum.reduce(1..8, [], fn(_x, acc) -> ["" | acc] end)
     }
 
     {:noreply, new_state}
   end
 
   def handle_cast({:transaction, transaction, sender}, state) do
-    new_state = handle_transaction_received(transaction, sender, state)
-    new_state = %{new_state | new_txs: [transaction | new_state.new_txs]}
+    {new_tx, new_state} = handle_transaction_received(transaction, sender, state)
+    new_state = if new_tx != nil, do: %{new_state | new_txs: [transaction | new_state.new_txs]}, else: new_state
     {:noreply, new_state}
   end
 
   def handle_cast({:transaction_assembled, transaction, new_wallet}, state) do
-    new_state = handle_transaction_assembled(transaction, new_wallet, state)
-    new_state = %{new_state | new_txs: [transaction | new_state.new_txs]}
+    {new_tx, new_state} = handle_transaction_assembled(transaction, new_wallet, state)
+    new_state = if new_tx != nil, do: %{new_state | new_txs: [transaction | new_state.new_txs]}, else: new_state
     {:noreply, new_state}
   end
 
   def handle_cast({:block, block, sender}, state) do
-    new_state = handle_block_received(block, sender, state)
-    new_state = %{new_state | new_blocks: [block | new_state.new_blocks]}
-    {:noreply, new_state}
+    {new_block, new_state} = handle_block_received(block, sender, state)
+    if new_block != nil do
+      new_recent_blocks = [
+        "Block hash: #{BitcoinCore.block_header_hash(new_block.header) |> Base.encode64(padding: false) |> String.slice(0..20)}...,
+          nonce: #{new_block.header.nonce |> Integer.to_string() |> String.pad_leading(7)}, tx count: #{length(new_block.transactions)}"
+        | new_state.recent_blocks |> Enum.drop(-1)]
+      new_state = %{new_state | new_blocks: [block | new_state.new_blocks], recent_blocks: new_recent_blocks}
+      if new_state.subscriber != nil, do: Drab.Live.poke(new_state.subscriber, BitcoinSimulatorWeb.DashboardView, "index.html", recent_blocks: new_state.recent_blocks)
+      {:noreply, new_state}
+    else
+      {:noreply, new_state}
+    end
   end
 
   def handle_cast({:block_mined, block, coinbase_addr}, state) do
-    new_state = handle_block_mined(block, coinbase_addr, state)
-    new_state = %{new_state | new_blocks: [block | new_state.new_blocks]}
-    {:noreply, new_state}
+    {new_block, new_state} = handle_block_mined(block, coinbase_addr, state)
+    if new_block != nil do
+      new_recent_blocks = [
+        "Block hash: #{BitcoinCore.block_header_hash(new_block.header) |> Base.encode64(padding: false) |> String.slice(0..20)}...,
+          nonce: #{new_block.header.nonce |> Integer.to_string() |> String.pad_leading(7)}, transaction count: #{length(new_block.transactions)}"
+        | new_state.recent_blocks |> Enum.drop(-1)]
+      new_state = %{new_state | new_blocks: [block | new_state.new_blocks], recent_blocks: new_recent_blocks}
+      if new_state.subscriber != nil, do: Drab.Live.poke(new_state.subscriber, BitcoinSimulatorWeb.DashboardView, "index.html", recent_blocks: new_state.recent_blocks)
+      {:noreply, new_state}
+    else
+      {:noreply, new_state}
+    end
   end
 
   def handle_cast({:peer_count_change, value}, state) do
@@ -200,16 +228,12 @@ defmodule BitcoinSimulator.Simulation.Monitor do
     end
   end
 
-  # Aux
-
-  defp get_random_ids(ids, target, result) do
-    if MapSet.size(result) == target do
-      result
-    else
-      result = MapSet.put(result, Enum.random(ids))
-      get_random_ids(ids, target, result)
-    end
+  def handle_cast({:notify_difficulty_change, value}, state) do
+    Enum.each(state.peers, fn(x) -> GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, {:difficulty_change, value}) end)
+    {:noreply, state}
   end
+
+  # Aux
 
   defp spawn_peers(peers, traders, miners, count) do
     notify_role(MapSet.to_list(traders), :trader, :remove)
@@ -244,7 +268,8 @@ defmodule BitcoinSimulator.Simulation.Monitor do
     trader_count = target_peer_count * GenServer.call(Param, {:get_param, :trader_percentage}) / 100 |> trunc()
     miner_count = target_peer_count * GenServer.call(Param, {:get_param, :miner_percentage}) / 100 |> trunc()
 
-    removed_peers = get_random_ids(MapSet.to_list(peers), count, MapSet.new())
+    removed_peers = Enum.take_random(MapSet.to_list(peers), count) |> MapSet.new()
+    if MapSet.size(removed_peers) != count, do: raise("Unmatched random count")
     Enum.each(removed_peers |> MapSet.to_list(), fn(x) -> GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{x}"}}, :terminate) end)
 
     new_peers = MapSet.difference(peers, MapSet.new(removed_peers))
@@ -258,23 +283,27 @@ defmodule BitcoinSimulator.Simulation.Monitor do
 
   defp add_trader(peers, traders, count) do
     non_trader = MapSet.difference(peers, traders)
-    added_traders = get_random_ids(non_trader |> MapSet.to_list(), count, MapSet.new())
+    added_traders = Enum.take_random(MapSet.to_list(non_trader), count) |> MapSet.new()
+    if MapSet.size(added_traders) != count, do: raise("Unmatched random count")
     {MapSet.union(traders, added_traders), added_traders}
   end
 
   defp remove_trader(traders, count) do
-    removed_traders = get_random_ids(traders |> MapSet.to_list(), count, MapSet.new())
+    removed_traders = Enum.take_random(MapSet.to_list(traders), count) |> MapSet.new()
+    if MapSet.size(removed_traders) != count, do: raise("Unmatched random count")
     {MapSet.difference(traders, removed_traders), removed_traders}
   end
 
   defp add_miner(peers, miners, count) do
     non_miner = MapSet.difference(peers, miners)
-    added_miners = get_random_ids(non_miner |> MapSet.to_list(), count, MapSet.new())
+    added_miners = Enum.take_random(MapSet.to_list(non_miner), count) |> MapSet.new()
+    if MapSet.size(added_miners) != count, do: raise("Unmatched random count")
     {MapSet.union(miners, added_miners), added_miners}
   end
 
   defp remove_miner(miners, count) do
-    removed_miners = get_random_ids(miners |> MapSet.to_list(), count, MapSet.new())
+    removed_miners = Enum.take_random(MapSet.to_list(miners), count) |> MapSet.new()
+    if MapSet.size(removed_miners) != count, do: raise("Unmatched random count")
     {MapSet.difference(miners, removed_miners), removed_miners}
   end
 

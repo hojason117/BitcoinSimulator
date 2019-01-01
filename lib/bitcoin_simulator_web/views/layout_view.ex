@@ -6,17 +6,15 @@ defmodule BitcoinSimulatorWeb.LayoutView do
   def simulation_started?(), do: GenServer.call(Monitor, :simulation_started?)
 
   def navbar_title(path) do
-    case path do
-      "/" ->
+    case path |> String.split("/") |> Enum.at(1) do
+      "" ->
         "Dashboard"
-      "/params" ->
+      "params" ->
         "Simulator Parameters"
-      "/interactive_peer" ->
-        "Interactive Peer"
-      "/blocks" ->
-        "Blocks"
-      "/transactions" ->
-        "Transactions"
+      # "interactive_peer" ->
+      #   "Interactive Peer"
+      "blockchain_viewer" ->
+        "Blockchain Viewer"
     end
   end
 

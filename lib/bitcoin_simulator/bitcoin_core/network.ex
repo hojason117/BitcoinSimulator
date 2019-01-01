@@ -33,12 +33,7 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
 
   def mix_neighbors(neighbors, self_id) do
     neighbors = MapSet.delete(neighbors, self_id)
-    neighbor_count = Const.decode(:neighbor_count)
-    if MapSet.size(neighbors) < neighbor_count do
-      neighbors
-    else
-      random_peer(neighbors, MapSet.new(), neighbor_count)
-    end
+    Enum.take_random(MapSet.to_list(neighbors), Const.decode(:neighbor_count)) |> MapSet.new()
   end
 
   def message_seen?(record, type, hash) do
@@ -91,10 +86,5 @@ defmodule BitcoinSimulator.BitcoinCore.Network do
   end
 
   # Aux
-
-  defp random_peer(set, result, target_count) do
-    result = MapSet.put(result, set |> MapSet.to_list() |> Enum.random())
-    if MapSet.size(result) < target_count, do: random_peer(set, result, target_count), else: result
-  end
 
 end

@@ -28,8 +28,10 @@ defmodule BitcoinSimulator.Simulation.Peer do
         new_state =
           case action do
             :add ->
+              if role == :trader, do: :ok = GenServer.call(TradeCenter, {:join_trading, state.id})
               %{state | roles: MapSet.put(state.roles, role)}
             :remove ->
+              if role == :trader, do: :ok = GenServer.call(TradeCenter, {:leave_trading, state.id})
               %{state | roles: MapSet.delete(state.roles, role)}
           end
         {:noreply, new_state}
@@ -37,6 +39,16 @@ defmodule BitcoinSimulator.Simulation.Peer do
 
       def handle_cast({:exchange_neighbors, peer_neighbors}, state) do
         {:noreply, %{state | neighbors: BitcoinCore.mix_neighbors(MapSet.union(state.neighbors, peer_neighbors), state.id)}}
+      end
+
+      def handle_cast({:difficulty_change, value}, state) do
+        if state.mining_process != nil do
+          Process.exit(state.mining_process, :kill)
+          Process.send_after(self(), :initiate_mine, 1000)
+          {:noreply, %{state | mining_process: nil, mining_txs: nil}}
+        else
+          {:noreply, state}
+        end
       end
 
       # Implement:
@@ -53,7 +65,8 @@ defmodule BitcoinSimulator.Simulation.Peer do
 
       def handle_cast(:terminate, state) do
         if state.mining_process != nil, do: Process.exit(state.mining_process, :kill)
-        GenServer.cast(Tracker, {:peer_leave, state.id})
+        :ok = GenServer.call(Tracker, {:peer_leave, state.id})
+        if MapSet.member?(state.roles, :trader), do: :ok = GenServer.call(TradeCenter, {:leave_trading, state.id})
         new_state = %{state | mining_process: nil, mining_txs: nil}
         {:stop, :normal, new_state}
       end
@@ -65,10 +78,11 @@ defmodule BitcoinSimulator.Simulation.Peer do
       end
 
       def handle_info(:initiate_trade, state) do
-        if MapSet.member?(state.roles, :trader), do: spawn_link(fn -> assemble_transaction(state.id, state.wallet) end)
-        trading_interval_min = GenServer.call(Param, {:get_param, :peer_auto_trading_interval_range_min})
-        trading_interval_max = GenServer.call(Param, {:get_param, :peer_auto_trading_interval_range_max})
-        Process.send_after(self(), :initiate_trade, Enum.random(trading_interval_min..trading_interval_max))
+        if MapSet.member?(state.roles, :trader) do
+          spawn_link(fn -> assemble_transaction(state.id, state.wallet) end)
+        else
+          Process.send_after(self(), :initiate_trade, 5000)
+        end
         {:noreply, state}
       end
 
@@ -82,7 +96,6 @@ defmodule BitcoinSimulator.Simulation.Peer do
           txs = [coinbase_tx | txs]
           block = BitcoinCore.get_block_template(BitcoinCore.get_best_block_hash(state.blockchain), txs)
           pid = spawn(BitcoinCore, :mine, [block, coinbase_addr, state.id])
-          # Process.flag(pid, :priority, :low)
           {:noreply, %{state | mining_process: pid, mining_txs: tx_hashes}}
         else
           Process.send_after(self(), :initiate_mine, 5000)
@@ -101,7 +114,7 @@ defmodule BitcoinSimulator.Simulation.Peer do
       # Aux
 
       def random_transaction_value(balance) do
-        if balance < 0.1 do
+        if balance < 1.0 do
           {0.0, 0.0, balance}
         else
           transaction_value_precision = Const.decode(:transaction_value_precision)
@@ -136,8 +149,6 @@ defmodule BitcoinSimulator.Simulation.Peer do
         Process.send_after(self(), :initiate_trade, Const.decode(:peer_initiate_auto_trading_after))
         Process.send_after(self(), :initiate_mine, Const.decode(:peer_initiate_mining_after))
 
-        GenServer.cast(TradeCenter, {:peer_join, id})
-
         state
       end
 
@@ -149,30 +160,42 @@ defmodule BitcoinSimulator.Simulation.Peer do
           if verification_result == :ok do
             filtered_neightbors = MapSet.delete(new_state.neighbors, sender)
             BitcoinCore.broadcast_message(:transaction, transaction, filtered_neightbors, new_state.id)
-            %{new_state | mempool: BitcoinCore.add_unconfirmed_tx(new_state.mempool, transaction, tx_hash)}
+            {transaction, %{new_state | mempool: BitcoinCore.add_unconfirmed_tx(new_state.mempool, transaction, tx_hash)}}
           else
             Logger.info("Transaction rejected [reason: #{verification_result}]")
-            new_state
+            {nil, new_state}
           end
         else
-          state
+          {nil, state}
         end
       end
 
       defp handle_transaction_assembled(transaction, new_wallet, state) do
-        verification_result = BitcoinCore.verify_transaction(state.blockchain, transaction)
-        if verification_result == :ok do
-          tx_hash = BitcoinCore.transaction_hash(transaction)
-          BitcoinCore.broadcast_message(:transaction, transaction, state.neighbors, state.id)
+        trading_interval_min = GenServer.call(Param, {:get_param, :peer_auto_trading_interval_range_min})
+        trading_interval_max = GenServer.call(Param, {:get_param, :peer_auto_trading_interval_range_max})
 
-          %{state |
-            message_record: BitcoinCore.saw_message(state.message_record, :transaction, tx_hash),
-            mempool: BitcoinCore.add_unconfirmed_tx(state.mempool, transaction, tx_hash),
-            wallet: new_wallet
-          }
+        if transaction != nil do
+          verification_result = BitcoinCore.verify_transaction(state.blockchain, transaction)
+          if verification_result == :ok do
+            tx_hash = BitcoinCore.transaction_hash(transaction)
+            BitcoinCore.broadcast_message(:transaction, transaction, state.neighbors, state.id)
+
+            new_state = %{state |
+              message_record: BitcoinCore.saw_message(state.message_record, :transaction, tx_hash),
+              mempool: BitcoinCore.add_unconfirmed_tx(state.mempool, transaction, tx_hash),
+              wallet: new_wallet
+            }
+
+            Process.send_after(self(), :initiate_trade, Enum.random(trading_interval_min..trading_interval_max))
+            {transaction, new_state}
+          else
+            Logger.info("Transaction rejected [reason: #{verification_result}]")
+            Process.send_after(self(), :initiate_trade, Enum.random(trading_interval_min..trading_interval_max))
+            {nil, state}
+          end
         else
-          Logger.info("Transaction rejected [reason: #{verification_result}]")
-          state
+          Process.send_after(self(), :initiate_trade, Enum.random(trading_interval_min..trading_interval_max))
+            {nil, state}
         end
       end
 
@@ -185,52 +208,69 @@ defmodule BitcoinSimulator.Simulation.Peer do
             filtered_neightbors = MapSet.delete(new_state.neighbors, sender)
             BitcoinCore.broadcast_message(:block, block, filtered_neightbors, new_state.id)
 
-            {new_blockchain, new_wallet, new_mempool} =
+            {new_blockchain, new_wallet, new_mempool, restart_mining?} =
               BitcoinCore.add_block(block, new_state.blockchain, new_state.wallet, new_state.mempool, new_state.mining_process, new_state.mining_txs)
 
-            %{new_state |
-              blockchain: new_blockchain,
-              wallet: new_wallet,
-              mempool: new_mempool
-            }
+            new_state =
+              if restart_mining? do
+                Process.exit(new_state.mining_process, :kill)
+                Process.send_after(self(), :initiate_mine, 1000)
+
+                %{new_state |
+                  blockchain: new_blockchain,
+                  wallet: new_wallet,
+                  mempool: new_mempool,
+                  mining_process: nil,
+                  mining_txs: nil
+                }
+              else
+                %{new_state |
+                  blockchain: new_blockchain,
+                  wallet: new_wallet,
+                  mempool: new_mempool
+                }
+              end
+
+            {block, new_state}
           else
             Logger.info("Block rejected [reason: #{verification_result}]")
-            new_state
+            {nil, new_state}
           end
         else
-          state
+          {nil, state}
         end
       end
 
       defp handle_block_mined(block, coinbase_addr, state) do
-        verification_result = BitcoinCore.verify_block(state.blockchain, block)
-        new_state =
-          if verification_result == :ok do
-            Logger.info("Block mined [transaction count: #{length(block.transactions)}]")
-            block_hash = BitcoinCore.block_header_hash(block.header)
-            BitcoinCore.broadcast_message(:block, block, state.neighbors, state.id)
-
-            new_wallet = BitcoinCore.import_address(state.wallet, coinbase_addr)
-
-            {new_blockchain, new_wallet, new_mempool} = BitcoinCore.add_block(block, state.blockchain, new_wallet, state.mempool)
-
-            %{state |
-              message_record: BitcoinCore.saw_message(state.message_record, :block, block_hash),
-              blockchain: new_blockchain,
-              wallet: new_wallet,
-              mempool: new_mempool
-            }
-          else
-            Logger.info("Block rejected [reason: #{verification_result}]")
-            state
-          end
-
         Process.send_after(self(), :initiate_mine, 2000)
-        new_state
+
+        verification_result = BitcoinCore.verify_block(state.blockchain, block)
+        if verification_result == :ok do
+          Logger.info("Block mined [transaction count: #{length(block.transactions)}]")
+          block_hash = BitcoinCore.block_header_hash(block.header)
+          BitcoinCore.broadcast_message(:block, block, state.neighbors, state.id)
+
+          new_wallet = BitcoinCore.import_address(state.wallet, coinbase_addr)
+
+          {new_blockchain, new_wallet, new_mempool, _restart_mining?} = BitcoinCore.add_block(block, state.blockchain, new_wallet, state.mempool)
+
+          new_state = %{state |
+            message_record: BitcoinCore.saw_message(state.message_record, :block, block_hash),
+            blockchain: new_blockchain,
+            wallet: new_wallet,
+            mempool: new_mempool,
+            mining_process: nil,
+            mining_txs: nil
+          }
+          {block, new_state}
+        else
+          Logger.info("Block rejected [reason: #{verification_result}]")
+          {nil, state}
+        end
       end
 
-      defp assemble_transaction(id, wallet) do
-        partners = get_random_trade_partners(id)
+      defp assemble_transaction(self_id, wallet) do
+        partners = get_random_trade_partners(self_id)
         {transaction_value, transaction_fee, _remain_value} = random_transaction_value(wallet.unspent_balance)
 
         unless partners == :not_enough_partner or transaction_value == 0.0 do
@@ -260,7 +300,9 @@ defmodule BitcoinSimulator.Simulation.Peer do
 
           transaction = BitcoinCore.create_raw_transaction(in_addresses, out_addresses, out_values, change_address, change_value)
 
-          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{id}"}}, {:transaction_assembled, transaction, new_wallet})
+          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{self_id}"}}, {:transaction_assembled, transaction, new_wallet})
+        else
+          GenServer.cast({:via, Registry, {BitcoinSimulator.Registry, "peer_#{self_id}"}}, {:transaction_assembled, nil, wallet})
         end
       end
 

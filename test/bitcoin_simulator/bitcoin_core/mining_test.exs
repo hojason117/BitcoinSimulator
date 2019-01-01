@@ -9,7 +9,7 @@ defmodule BitcoinSimulator.BitcoinCore.MiningTest do
     assert Mining.get_new_mempool().unconfirmed_txs == %{}
   end
 
-  test "add unconfirmed transaction" do
+  test "add unconfirmed tx" do
     mempool = %Mining.MemPool{}
     assert Map.has_key?(mempool.unconfirmed_txs, :crypto.hash(:sha256, "test")) == false
     mempool = Mining.add_unconfirmed_tx(mempool, "test", :crypto.hash(:sha256, "test"))
@@ -61,14 +61,6 @@ defmodule BitcoinSimulator.BitcoinCore.MiningTest do
     }
 
     assert Mining.get_block_template(prev_hash, []) == block
-  end
-
-  test "add unconfirmed tx" do
-    mempool = %Mining.MemPool{}
-    hash = <<227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36,
-      39, 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85>>
-    mempool = Mining.add_unconfirmed_tx(mempool, %Blockchain.Transaction{}, hash)
-    assert Map.has_key?(mempool.unconfirmed_txs, hash)
   end
 
   test "match leading zeros?" do

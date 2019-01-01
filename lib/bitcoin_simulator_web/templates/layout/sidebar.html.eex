@@ -11,15 +11,12 @@
       <li>
         <a href="/params">Simulator Parameters</a>
       </li>
-      <li>
+      <%# <li>
         <a href="/interactive_peer">Interactive Peer</a>
-      </li>
-      <li>
-        <a href="/blocks">Blocks</a>
-      </li>
-      <li>
-        <a href="/transactions">Transactions</a>
-      </li>
+      </li> %>
+      <%# <li>
+        <a href="/blockchain_viewer">Blockchain Viewer</a>
+      </li> %>
     </ul>
   </nav>
 </div>
